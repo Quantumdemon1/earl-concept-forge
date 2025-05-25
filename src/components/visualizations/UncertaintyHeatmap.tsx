@@ -19,6 +19,40 @@ interface UncertaintyData {
   }>
 }
 
+// Custom content component for Treemap
+const TreemapContent = ({ x, y, width, height, value, name }: any) => {
+  const getColor = (value: number) => {
+    // Green to Red gradient based on uncertainty
+    const hue = ((1 - value) * 120).toString(10)
+    return `hsl(${hue}, 70%, 50%)`
+  }
+
+  return (
+    <g>
+      <rect
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        style={{
+          fill: getColor(value),
+          stroke: '#fff',
+          strokeWidth: 2,
+        }}
+      />
+      <text
+        x={x + width / 2}
+        y={y + height / 2}
+        textAnchor="middle"
+        dominantBaseline="central"
+        className="fill-white text-sm font-medium"
+      >
+        {name}
+      </text>
+    </g>
+  )
+}
+
 export default function UncertaintyHeatmap({ data }: { data: UncertaintyData }) {
   const treemapData = useMemo(() => {
     return data.components.map((component) => {
@@ -34,12 +68,6 @@ export default function UncertaintyHeatmap({ data }: { data: UncertaintyData }) 
       }
     })
   }, [data])
-  
-  const getColor = (value: number) => {
-    // Green to Red gradient based on uncertainty
-    const hue = ((1 - value) * 120).toString(10)
-    return `hsl(${hue}, 70%, 50%)`
-  }
   
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload[0]) {
@@ -83,30 +111,7 @@ export default function UncertaintyHeatmap({ data }: { data: UncertaintyData }) 
             dataKey="size"
             aspectRatio={4 / 3}
             stroke="#fff"
-            content={({ x, y, width, height, value, name }: any) => (
-              <g>
-                <rect
-                  x={x}
-                  y={y}
-                  width={width}
-                  height={height}
-                  style={{
-                    fill: getColor(value),
-                    stroke: '#fff',
-                    strokeWidth: 2,
-                  }}
-                />
-                <text
-                  x={x + width / 2}
-                  y={y + height / 2}
-                  textAnchor="middle"
-                  dominantBaseline="central"
-                  className="fill-white text-sm font-medium"
-                >
-                  {name}
-                </text>
-              </g>
-            )}
+            content={<TreemapContent />}
           >
             <Tooltip content={<CustomTooltip />} />
           </Treemap>
