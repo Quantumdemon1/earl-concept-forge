@@ -1,6 +1,6 @@
 
 import { useAuth } from '@/hooks/useAuth';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 
 interface ProtectedLayoutProps {
@@ -9,6 +9,7 @@ interface ProtectedLayoutProps {
 
 export function ProtectedLayout({ children }: ProtectedLayoutProps) {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -18,7 +19,10 @@ export function ProtectedLayout({ children }: ProtectedLayoutProps) {
     );
   }
 
-  if (!user) {
+  // Allow bypass for testing - if user came from login bypass, don't redirect
+  const isFromBypass = location.state?.fromBypass;
+  
+  if (!user && !isFromBypass) {
     return <Navigate to="/login" replace />;
   }
 

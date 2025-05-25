@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -31,7 +30,7 @@ export default function Login() {
 
   const handleBypass = () => {
     // Bypass authentication for testing
-    navigate('/dashboard');
+    navigate('/dashboard', { state: { fromBypass: true } });
   };
 
   return (
