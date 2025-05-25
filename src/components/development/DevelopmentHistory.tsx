@@ -1,30 +1,17 @@
 
-import { useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { formatDistanceToNow } from 'date-fns'
+import { Separator } from '@/components/ui/separator'
+import { MessageSquare, Brain, FileText, CheckCircle2 } from 'lucide-react'
 
 interface DevelopmentHistoryProps {
   session: any
 }
 
 export default function DevelopmentHistory({ session }: DevelopmentHistoryProps) {
-  const historyItems = useMemo(() => {
-    if (!session?.history) return []
-    
-    return session.history.map((item: any, index: number) => ({
-      iteration: index + 1,
-      stage: item.stage || 'unknown',
-      timestamp: item.timestamp || new Date().toISOString(),
-      scores: item.scores || {},
-      summary: item.summary || 'Iteration completed',
-      findings: item.findings || [],
-      actions: item.actions || [],
-    }))
-  }, [session?.history])
-  
-  if (!session) {
+  if (!session?.history || session.history.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -32,98 +19,206 @@ export default function DevelopmentHistory({ session }: DevelopmentHistoryProps)
         </CardHeader>
         <CardContent>
           <div className="text-center py-8 text-muted-foreground">
-            No development history available.
+            No development history available yet. Start development to see LLM interactions.
           </div>
         </CardContent>
       </Card>
     )
   }
-  
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Development History</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-[600px]">
-          <div className="space-y-4">
-            {historyItems.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No iterations completed yet.
-              </div>
-            ) : (
-              historyItems.map((item) => (
-                <div
-                  key={item.iteration}
-                  className="border rounded-lg p-4 space-y-3"
-                >
-                  <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" />
+            Development History ({session.history.length} iterations)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-[600px] pr-4">
+            <div className="space-y-6">
+              {session.history.map((item: any, index: number) => (
+                <div key={index} className="border rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <Badge variant="outline">
-                        Iteration {item.iteration}
+                        Iteration {item.iteration || index + 1}
                       </Badge>
-                      <Badge variant="secondary">
-                        {item.stage}
+                      <Badge className="capitalize">
+                        {item.stage || 'Unknown'}
                       </Badge>
+                      {item.timestamp && (
+                        <span className="text-sm text-muted-foreground">
+                          {new Date(item.timestamp).toLocaleString()}
+                        </span>
+                      )}
                     </div>
-                    <span className="text-sm text-muted-foreground">
-                      {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}
-                    </span>
                   </div>
-                  
-                  <p className="text-sm">{item.summary}</p>
-                  
-                  {/* Quality Scores */}
-                  {Object.keys(item.scores).length > 0 && (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                      {Object.entries(item.scores).map(([key, value]) => (
-                        <div key={key} className="text-center">
+
+                  <Tabs defaultValue="overview" className="w-full">
+                    <TabsList className="grid w-full grid-cols-4">
+                      <TabsTrigger value="overview">Overview</TabsTrigger>
+                      <TabsTrigger value="prompt">Prompt</TabsTrigger>
+                      <TabsTrigger value="response">Response</TabsTrigger>
+                      <TabsTrigger value="extracted">Extracted</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="overview" className="space-y-3">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="text-center p-3 bg-muted/50 rounded">
                           <div className="text-lg font-semibold">
-                            {Math.round((value as number) * 100)}%
+                            {Math.round((item.scores?.completeness || 0) * 100)}%
                           </div>
-                          <div className="text-xs text-muted-foreground capitalize">
-                            {key}
-                          </div>
+                          <div className="text-sm text-muted-foreground">Completeness</div>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                  
-                  {/* Key Findings */}
-                  {item.findings.length > 0 && (
-                    <div>
-                      <h5 className="text-sm font-medium mb-2">Key Findings:</h5>
-                      <ul className="text-sm text-muted-foreground space-y-1">
-                        {item.findings.map((finding: string, idx: number) => (
-                          <li key={idx} className="flex items-start gap-2">
-                            <span className="text-primary">•</span>
-                            <span>{finding}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  
-                  {/* Actions Taken */}
-                  {item.actions.length > 0 && (
-                    <div>
-                      <h5 className="text-sm font-medium mb-2">Actions Taken:</h5>
-                      <ul className="text-sm text-muted-foreground space-y-1">
-                        {item.actions.map((action: string, idx: number) => (
-                          <li key={idx} className="flex items-start gap-2">
-                            <span className="text-green-500">✓</span>
-                            <span>{action}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                        <div className="text-center p-3 bg-muted/50 rounded">
+                          <div className="text-lg font-semibold">
+                            {Math.round((item.scores?.confidence || 0) * 100)}%
+                          </div>
+                          <div className="text-sm text-muted-foreground">Confidence</div>
+                        </div>
+                        <div className="text-center p-3 bg-muted/50 rounded">
+                          <div className="text-lg font-semibold">
+                            {Math.round((item.scores?.feasibility || 0) * 100)}%
+                          </div>
+                          <div className="text-sm text-muted-foreground">Feasibility</div>
+                        </div>
+                        <div className="text-center p-3 bg-muted/50 rounded">
+                          <div className="text-lg font-semibold">
+                            {Math.round((item.scores?.novelty || 0) * 100)}%
+                          </div>
+                          <div className="text-sm text-muted-foreground">Novelty</div>
+                        </div>
+                      </div>
+
+                      {item.summary && (
+                        <div className="p-3 bg-blue-50 border border-blue-200 rounded">
+                          <h4 className="font-medium text-blue-900 mb-1">Iteration Summary</h4>
+                          <p className="text-sm text-blue-800">{item.summary}</p>
+                        </div>
+                      )}
+                    </TabsContent>
+
+                    <TabsContent value="prompt" className="space-y-3">
+                      <div className="p-4 bg-muted rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Brain className="h-4 w-4" />
+                          <span className="font-medium">Prompt Sent to LLM</span>
+                        </div>
+                        <ScrollArea className="h-48">
+                          <pre className="text-sm whitespace-pre-wrap">
+                            {item.prompt || 'No prompt data available'}
+                          </pre>
+                        </ScrollArea>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="response" className="space-y-3">
+                      <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <MessageSquare className="h-4 w-4 text-green-600" />
+                          <span className="font-medium text-green-900">LLM Response</span>
+                        </div>
+                        <ScrollArea className="h-64">
+                          <div className="text-sm">
+                            {item.response ? (
+                              <pre className="whitespace-pre-wrap text-green-800">
+                                {typeof item.response === 'string' 
+                                  ? item.response 
+                                  : JSON.stringify(item.response, null, 2)
+                                }
+                              </pre>
+                            ) : (
+                              <span className="text-green-700">No response data available</span>
+                            )}
+                          </div>
+                        </ScrollArea>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="extracted" className="space-y-3">
+                      <div className="grid gap-3">
+                        {item.extractedComponents && (
+                          <div className="p-3 border rounded">
+                            <div className="flex items-center gap-2 mb-2">
+                              <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                              <span className="font-medium">Components</span>
+                              <Badge variant="secondary">{item.extractedComponents.length}</Badge>
+                            </div>
+                            <div className="text-sm space-y-1">
+                              {item.extractedComponents.map((comp: any, i: number) => (
+                                <div key={i} className="p-2 bg-muted/50 rounded">
+                                  <strong>{comp.name || `Component ${i + 1}`}:</strong> {comp.description || comp.content}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {item.extractedResearch && (
+                          <div className="p-3 border rounded">
+                            <div className="flex items-center gap-2 mb-2">
+                              <FileText className="h-4 w-4 text-purple-600" />
+                              <span className="font-medium">Research</span>
+                              <Badge variant="secondary">{item.extractedResearch.length}</Badge>
+                            </div>
+                            <div className="text-sm space-y-1">
+                              {item.extractedResearch.map((research: any, i: number) => (
+                                <div key={i} className="p-2 bg-muted/50 rounded">
+                                  {research.finding || research.content || research}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {item.extractedValidations && (
+                          <div className="p-3 border rounded">
+                            <div className="flex items-center gap-2 mb-2">
+                              <CheckCircle2 className="h-4 w-4 text-green-600" />
+                              <span className="font-medium">Validations</span>
+                              <Badge variant="secondary">{item.extractedValidations.length}</Badge>
+                            </div>
+                            <div className="text-sm space-y-1">
+                              {item.extractedValidations.map((validation: any, i: number) => (
+                                <div key={i} className="p-2 bg-muted/50 rounded">
+                                  {validation.result || validation.content || validation}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {item.extractedRefinements && (
+                          <div className="p-3 border rounded">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Brain className="h-4 w-4 text-orange-600" />
+                              <span className="font-medium">Refinements</span>
+                              <Badge variant="secondary">{item.extractedRefinements.length}</Badge>
+                            </div>
+                            <div className="text-sm space-y-1">
+                              {item.extractedRefinements.map((refinement: any, i: number) => (
+                                <div key={i} className="p-2 bg-muted/50 rounded">
+                                  {refinement.improvement || refinement.content || refinement}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+
+                  {index < session.history.length - 1 && (
+                    <Separator className="mt-6" />
                   )}
                 </div>
-              ))
-            )}
-          </div>
-        </ScrollArea>
-      </CardContent>
-    </Card>
+              ))}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+    </div>
   )
 }
