@@ -1,6 +1,6 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useDevelopmentStore } from '@/stores/developmentStore'
+import { useSessionManagement } from '@/hooks/development/useSessionManagement'
+import { useSessionPersistence } from '@/hooks/development/useSessionPersistence'
 import { useToast } from '@/hooks/use-toast'
 
 interface UseDevelopmentOptions {
@@ -19,6 +19,11 @@ interface UseDevelopmentOptions {
 
 export function useDevelopment(conceptId: string, options: UseDevelopmentOptions = {}) {
   const { toast } = useToast()
+  
+  // Initialize persistence
+  useSessionPersistence()
+  
+  // Get session management functions
   const {
     startSession,
     runIteration,
@@ -27,7 +32,7 @@ export function useDevelopment(conceptId: string, options: UseDevelopmentOptions
     getSession,
     currentSessionId,
     loadSession,
-  } = useDevelopmentStore()
+  } = useSessionManagement()
   
   const [isRunning, setIsRunning] = useState(false)
   const [isStarting, setIsStarting] = useState(false)
