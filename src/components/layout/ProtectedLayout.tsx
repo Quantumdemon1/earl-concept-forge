@@ -19,8 +19,8 @@ export function ProtectedLayout({ children }: ProtectedLayoutProps) {
     );
   }
 
-  // Allow bypass for testing - if user came from login bypass, don't redirect
-  const isFromBypass = location.state?.fromBypass;
+  // Allow bypass for testing - check both location state and localStorage
+  const isFromBypass = location.state?.fromBypass || localStorage.getItem('auth-bypass') === 'true';
   
   if (!user && !isFromBypass) {
     return <Navigate to="/login" replace />;

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -20,6 +21,8 @@ export default function Login() {
     
     try {
       await signIn(email, password);
+      // Clear any bypass flag when doing real login
+      localStorage.removeItem('auth-bypass');
       navigate('/dashboard');
     } catch (error) {
       // Error is handled in AuthContext
@@ -29,7 +32,8 @@ export default function Login() {
   };
 
   const handleBypass = () => {
-    // Bypass authentication for testing
+    // Set bypass flag in localStorage for testing
+    localStorage.setItem('auth-bypass', 'true');
     navigate('/dashboard', { state: { fromBypass: true } });
   };
 
