@@ -170,7 +170,7 @@ export const useDevelopmentStore = create<DevelopmentStore>()(
                 novelty: data.novelty_score,
               },
               isActive: data.is_active,
-              history: data.llm_interactions || [],
+              history: Array.isArray(data.llm_interactions) ? data.llm_interactions : [],
               startedAt: data.started_at,
               completedAt: data.completed_at,
             }
