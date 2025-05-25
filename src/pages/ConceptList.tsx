@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -22,13 +23,19 @@ import { formatDistanceToNow } from 'date-fns'
 export default function ConceptList() {
   const [searchTerm, setSearchTerm] = useState('')
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const { user } = useAuth()
   
-  const { data: concepts, isLoading } = useQuery({
-    queryKey: ['concepts', searchTerm],
+  const { data: concepts, isLoading, error } = useQuery({
+    queryKey: ['concepts', searchTerm, user?.id],
     queryFn: async () => {
+      if (!user) {
+        throw new Error('User not authenticated')
+      }
+
       let query = supabase
         .from('concepts')
         .select('*')
+        .eq('owner_id', user.id)
         .order('created_at', { ascending: false })
       
       if (searchTerm) {
@@ -36,10 +43,38 @@ export default function ConceptList() {
       }
       
       const { data, error } = await query
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching concepts:', error)
+        throw error
+      }
       return data
     },
+    enabled: !!user,
   })
+
+  if (!user) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="flex items-center justify-center py-8">
+            <p className="text-muted-foreground">Please log in to view your concepts</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+  
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="flex items-center justify-center py-8">
+            <p className="text-destructive">Error loading concepts: {error.message}</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
   
   return (
     <div className="space-y-6">
@@ -84,8 +119,8 @@ export default function ConceptList() {
               </CardContent>
             </Card>
           ))
-        ) : (
-          concepts?.map((concept) => (
+        ) : concepts && concepts.length > 0 ? (
+          concepts.map((concept) => (
             <Card key={concept.id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex items-start justify-between">
@@ -110,7 +145,7 @@ export default function ConceptList() {
                 <p className="line-clamp-3 text-sm text-muted-foreground">
                   {concept.description}
                 </p>
-                {concept.domains.length > 0 && (
+                {concept.domains && concept.domains.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-1">
                     {concept.domains.map((domain) => (
                       <Badge key={domain} variant="secondary" className="text-xs">
@@ -130,6 +165,21 @@ export default function ConceptList() {
               </CardFooter>
             </Card>
           ))
+        ) : (
+          <div className="col-span-full">
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <h3 className="text-lg font-semibold mb-2">No concepts found</h3>
+                <p className="text-muted-foreground text-center mb-6">
+                  {searchTerm ? "Try adjusting your search terms" : "Create your first concept to get started"}
+                </p>
+                <Button onClick={() => setShowCreateDialog(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Concept
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         )}
       </div>
       
