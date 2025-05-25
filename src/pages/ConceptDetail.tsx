@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import StartAnalysisDialog from '@/components/analysis/StartAnalysisDialog'
 import DevelopmentPanel from '@/components/development/DevelopmentPanel'
+import ExportPanel from '@/components/export/ExportPanel'
 import { ArrowLeft, Play, Eye, Zap, Brain, FileText } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 
