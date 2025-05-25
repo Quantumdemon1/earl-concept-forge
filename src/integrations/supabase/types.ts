@@ -121,6 +121,68 @@ export type Database = {
           },
         ]
       }
+      concept_development_sessions: {
+        Row: {
+          completed_at: string | null
+          completeness_score: number | null
+          concept_id: string | null
+          confidence_score: number | null
+          config: Json | null
+          created_at: string | null
+          feasibility_score: number | null
+          id: string
+          is_active: boolean | null
+          iteration_count: number | null
+          llm_interactions: Json | null
+          novelty_score: number | null
+          stage: Database["public"]["Enums"]["development_stage"] | null
+          started_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          completeness_score?: number | null
+          concept_id?: string | null
+          confidence_score?: number | null
+          config?: Json | null
+          created_at?: string | null
+          feasibility_score?: number | null
+          id?: string
+          is_active?: boolean | null
+          iteration_count?: number | null
+          llm_interactions?: Json | null
+          novelty_score?: number | null
+          stage?: Database["public"]["Enums"]["development_stage"] | null
+          started_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          completeness_score?: number | null
+          concept_id?: string | null
+          confidence_score?: number | null
+          config?: Json | null
+          created_at?: string | null
+          feasibility_score?: number | null
+          id?: string
+          is_active?: boolean | null
+          iteration_count?: number | null
+          llm_interactions?: Json | null
+          novelty_score?: number | null
+          stage?: Database["public"]["Enums"]["development_stage"] | null
+          started_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "concept_development_sessions_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "concepts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       concepts: {
         Row: {
           created_at: string | null
@@ -161,6 +223,100 @@ export type Database = {
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      development_iterations: {
+        Row: {
+          created_at: string | null
+          extracted_components: Json | null
+          extracted_refinements: Json | null
+          extracted_research: Json | null
+          extracted_validations: Json | null
+          id: string
+          iteration_number: number
+          llm_response: Json
+          prompt_filled: string
+          prompt_template: string
+          quality_scores: Json | null
+          session_id: string | null
+          stage: Database["public"]["Enums"]["development_stage"]
+        }
+        Insert: {
+          created_at?: string | null
+          extracted_components?: Json | null
+          extracted_refinements?: Json | null
+          extracted_research?: Json | null
+          extracted_validations?: Json | null
+          id?: string
+          iteration_number: number
+          llm_response: Json
+          prompt_filled: string
+          prompt_template: string
+          quality_scores?: Json | null
+          session_id?: string | null
+          stage: Database["public"]["Enums"]["development_stage"]
+        }
+        Update: {
+          created_at?: string | null
+          extracted_components?: Json | null
+          extracted_refinements?: Json | null
+          extracted_research?: Json | null
+          extracted_validations?: Json | null
+          id?: string
+          iteration_number?: number
+          llm_response?: Json
+          prompt_filled?: string
+          prompt_template?: string
+          quality_scores?: Json | null
+          session_id?: string | null
+          stage?: Database["public"]["Enums"]["development_stage"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "development_iterations_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "concept_development_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      external_research_cache: {
+        Row: {
+          concept_id: string | null
+          created_at: string | null
+          expires_at: string
+          id: string
+          query: string
+          results: Json
+          source: string
+        }
+        Insert: {
+          concept_id?: string | null
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          query: string
+          results: Json
+          source: string
+        }
+        Update: {
+          concept_id?: string | null
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          query?: string
+          results?: Json
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "external_research_cache_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "concepts"
             referencedColumns: ["id"]
           },
         ]
@@ -256,6 +412,14 @@ export type Database = {
         | "reiterating"
         | "completed"
       confidence_rating: "high" | "moderate" | "low"
+      development_stage:
+        | "initial"
+        | "expanding"
+        | "researching"
+        | "validating"
+        | "refining"
+        | "implementing"
+        | "complete"
       uncertainty_level: "low" | "moderate" | "high"
     }
     CompositeTypes: {
@@ -381,6 +545,15 @@ export const Constants = {
         "completed",
       ],
       confidence_rating: ["high", "moderate", "low"],
+      development_stage: [
+        "initial",
+        "expanding",
+        "researching",
+        "validating",
+        "refining",
+        "implementing",
+        "complete",
+      ],
       uncertainty_level: ["low", "moderate", "high"],
     },
   },
