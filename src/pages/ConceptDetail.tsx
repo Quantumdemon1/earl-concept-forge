@@ -1,317 +1,193 @@
 
-import { MainLayout } from "@/components/layout/main-layout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Link, useParams } from "react-router-dom";
-import { 
-  Play, 
-  Edit, 
-  Share, 
-  Download,
-  Clock,
-  User,
-  Calendar,
-  BarChart3
-} from "lucide-react";
+import { useState } from 'react'
+import { useParams, Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { supabase } from '@/lib/supabase'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import StartAnalysisDialog from '@/components/analysis/StartAnalysisDialog'
+import { ArrowLeft, Play, Eye } from 'lucide-react'
+import { formatDistanceToNow } from 'date-fns'
 
-const ConceptDetail = () => {
-  const { id } = useParams();
-
-  // Mock data - would be fetched based on ID
-  const concept = {
-    id: 1,
-    name: "Artificial Intelligence Ethics",
-    description: "Exploring the moral implications and guidelines for AI development and deployment in modern society. This comprehensive analysis examines various ethical frameworks and their application to artificial intelligence systems.",
-    domain: "Technology",
-    subdomain: "Ethics & Philosophy",
-    status: "analyze",
-    progress: 65,
-    confidence: 78,
-    createdAt: "2024-01-15",
-    updatedAt: "2024-01-20",
-    author: "Dr. Sarah Chen",
-    tags: ["AI", "Ethics", "Philosophy", "Technology Policy"],
-    metadata: {
-      complexity: "High",
-      priority: "Medium",
-      estimatedHours: 12,
-      actualHours: 8
-    }
-  };
-
-  const analysisHistory = [
-    {
-      stage: "evaluate",
-      completedAt: "2024-01-16",
-      confidence: 72,
-      keyFindings: ["Identified 5 core ethical principles", "Mapped stakeholder concerns"]
+export default function ConceptDetail() {
+  const { id } = useParams<{ id: string }>()
+  const [showAnalysisDialog, setShowAnalysisDialog] = useState(false)
+  
+  const { data: concept, isLoading } = useQuery({
+    queryKey: ['concept', id],
+    queryFn: async () => {
+      if (!id) throw new Error('Concept ID is required')
+      
+      const { data, error } = await supabase
+        .from('concepts')
+        .select('*')
+        .eq('id', id)
+        .single()
+      
+      if (error) throw error
+      return data
     },
-    {
-      stage: "analyze", 
-      completedAt: "2024-01-18",
-      confidence: 78,
-      keyFindings: ["Deep analysis of principle conflicts", "Stakeholder impact assessment"]
-    }
-  ];
-
-  const stageProgress = [
-    { stage: "Evaluate", status: "completed", progress: 100 },
-    { stage: "Analyze", status: "active", progress: 65 },
-    { stage: "Refine", status: "pending", progress: 0 },
-    { stage: "Reiterate", status: "pending", progress: 0 }
-  ];
-
-  return (
-    <MainLayout>
-      <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex justify-between items-start">
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold mb-2">{concept.name}</h1>
-            <p className="text-muted-foreground mb-4">{concept.description}</p>
-            
-            <div className="flex gap-2 mb-4">
-              {concept.tags.map((tag) => (
-                <Badge key={tag} variant="secondary">{tag}</Badge>
-              ))}
-            </div>
-          </div>
-          
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm">
-              <Share className="mr-2 h-4 w-4" />
-              Share
-            </Button>
-            <Button variant="outline" size="sm">
-              <Download className="mr-2 h-4 w-4" />
-              Export
-            </Button>
-            <Button variant="outline" size="sm">
-              <Edit className="mr-2 h-4 w-4" />
-              Edit
-            </Button>
-            <Button asChild>
-              <Link to={`/concepts/${id}/analysis`}>
-                <Play className="mr-2 h-4 w-4" />
-                Continue Analysis
-              </Link>
-            </Button>
-          </div>
+    enabled: !!id,
+  })
+  
+  const { data: analyses } = useQuery({
+    queryKey: ['concept-analyses', id],
+    queryFn: async () => {
+      if (!id) return []
+      
+      const { data, error } = await supabase
+        .from('analysis_jobs')
+        .select('*')
+        .eq('concept_id', id)
+        .order('created_at', { ascending: false })
+      
+      if (error) throw error
+      return data
+    },
+    enabled: !!id,
+  })
+  
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
         </div>
-
-        {/* Status Cards */}
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Overall Progress</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold mb-2">{concept.progress}%</div>
-              <Progress value={concept.progress} className="h-2" />
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Confidence Level</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold mb-2">{concept.confidence}%</div>
-              <Progress value={concept.confidence} className="h-2" />
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Current Stage</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold capitalize">{concept.status}</div>
-              <p className="text-xs text-muted-foreground">Active analysis phase</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Time Invested</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{concept.metadata.actualHours}h</div>
-              <p className="text-xs text-muted-foreground">
-                of {concept.metadata.estimatedHours}h estimated
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Stage Progress */}
+      </div>
+    )
+  }
+  
+  if (!concept) {
+    return (
+      <div className="space-y-6">
         <Card>
-          <CardHeader>
-            <CardTitle>EARL Analysis Pipeline</CardTitle>
-            <CardDescription>Progress through the four analysis stages</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-4">
-              {stageProgress.map((stage, index) => (
-                <div key={stage.stage} className="relative">
-                  <div className={`p-4 rounded-lg border-2 transition-colors ${
-                    stage.status === 'completed' 
-                      ? 'border-green-500 bg-green-50' 
-                      : stage.status === 'active'
-                        ? 'border-primary bg-primary/5'
-                        : 'border-muted bg-muted/20'
-                  }`}>
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium">{stage.stage}</h4>
-                      <Badge 
-                        variant={stage.status === 'completed' ? 'default' : 'secondary'}
-                        className="capitalize"
-                      >
-                        {stage.status}
-                      </Badge>
-                    </div>
-                    <Progress value={stage.progress} className="h-2" />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {stage.progress}% complete
-                    </p>
-                  </div>
-                  
-                  {index < stageProgress.length - 1 && (
-                    <div className="hidden md:block absolute top-1/2 -right-2 w-4 h-0.5 bg-muted transform -translate-y-1/2" />
-                  )}
-                </div>
-              ))}
-            </div>
+          <CardContent className="flex items-center justify-center py-8">
+            <p className="text-muted-foreground">Concept not found</p>
           </CardContent>
         </Card>
-
-        {/* Main Content Tabs */}
-        <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="history">Analysis History</TabsTrigger>
-            <TabsTrigger value="metadata">Metadata</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="overview" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Concept Details</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid gap-2">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Domain:</span>
-                      <span className="font-medium">{concept.domain}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Subdomain:</span>
-                      <span className="font-medium">{concept.subdomain}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Complexity:</span>
-                      <Badge variant="outline">{concept.metadata.complexity}</Badge>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Priority:</span>
-                      <Badge variant="outline">{concept.metadata.priority}</Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle>Project Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid gap-2">
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">Author: {concept.author}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">Created: {concept.createdAt}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">Updated: {concept.updatedAt}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+      </div>
+    )
+  }
+  
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="sm" asChild>
+          <Link to="/concepts/list">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Concepts
+          </Link>
+        </Button>
+        <div className="flex-1">
+          <h1 className="text-3xl font-bold">{concept.name}</h1>
+          <p className="text-muted-foreground">
+            Created {formatDistanceToNow(new Date(concept.created_at))} ago
+          </p>
+        </div>
+        <Button onClick={() => setShowAnalysisDialog(true)}>
+          <Play className="h-4 w-4 mr-2" />
+          Start Analysis
+        </Button>
+      </div>
+      
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Description</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm">{concept.description}</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <h4 className="text-sm font-medium">Status</h4>
+              <Badge variant={
+                concept.status === 'completed' ? 'default' :
+                concept.status === 'draft' ? 'secondary' :
+                'outline'
+              }>
+                {concept.status}
+              </Badge>
             </div>
-          </TabsContent>
-          
-          <TabsContent value="history" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Analysis Timeline</CardTitle>
-                <CardDescription>Complete history of analysis stages</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {analysisHistory.map((entry, index) => (
-                    <div key={index} className="border-l-2 border-primary pl-4 pb-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-medium capitalize">{entry.stage} Stage</h4>
-                        <span className="text-sm text-muted-foreground">{entry.completedAt}</span>
-                      </div>
-                      <div className="mb-2">
-                        <span className="text-sm text-muted-foreground">Confidence: </span>
-                        <span className="font-medium">{entry.confidence}%</span>
-                      </div>
-                      <div className="space-y-1">
-                        <span className="text-sm font-medium">Key Findings:</span>
-                        <ul className="text-sm text-muted-foreground ml-4 space-y-1">
-                          {entry.keyFindings.map((finding, i) => (
-                            <li key={i} className="list-disc">{finding}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
+            
+            {concept.domains && concept.domains.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium mb-2">Domains</h4>
+                <div className="flex flex-wrap gap-1">
+                  {concept.domains.map((domain) => (
+                    <Badge key={domain} variant="secondary" className="text-xs">
+                      {domain}
+                    </Badge>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="metadata" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Technical Metadata</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Analysis Parameters</h4>
-                    <div className="text-sm space-y-1">
-                      <div>Confidence Threshold: 75%</div>
-                      <div>Analysis Depth: Comprehensive</div>
-                      <div>Validation Method: Peer Review</div>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Performance Metrics</h4>
-                    <div className="text-sm space-y-1">
-                      <div>Processing Time: 2.4 hours</div>
-                      <div>Memory Usage: 85MB</div>
-                      <div>Iterations: 3</div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
-    </MainLayout>
-  );
-};
-
-export default ConceptDetail;
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Analysis History</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {analyses && analyses.length > 0 ? (
+            <div className="space-y-3">
+              {analyses.map((analysis) => (
+                <div
+                  key={analysis.id}
+                  className="flex items-center justify-between p-3 border rounded-lg"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Badge variant={
+                        analysis.status === 'completed' ? 'default' :
+                        analysis.status === 'failed' ? 'destructive' :
+                        'secondary'
+                      }>
+                        {analysis.status}
+                      </Badge>
+                      <span className="text-sm text-muted-foreground">
+                        {formatDistanceToNow(new Date(analysis.created_at))} ago
+                      </span>
+                    </div>
+                    <p className="text-sm">
+                      Progress: {analysis.progress || 0}% • Current stage: {analysis.current_stage || 'pending'}
+                    </p>
+                  </div>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to={`/concepts/${id}/analysis/${analysis.id}`}>
+                      <Eye className="h-4 w-4 mr-2" />
+                      View
+                    </Link>
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-center py-8">
+              No analyses yet. Start your first analysis to begin.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+      
+      {concept && (
+        <StartAnalysisDialog
+          conceptId={concept.id}
+          conceptName={concept.name}
+          open={showAnalysisDialog}
+          onOpenChange={setShowAnalysisDialog}
+        />
+      )}
+    </div>
+  )
+}
