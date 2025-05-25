@@ -13,12 +13,25 @@ interface AnalysisMonitorProps {
   jobId: string
 }
 
+type StageStatus = 'pending' | 'running' | 'completed' | 'error'
+
+interface Stage {
+  name: string
+  status: StageStatus
+  confidence?: number
+}
+
+interface AnalysisConfig {
+  enableAI?: boolean
+  skipStages?: string[]
+}
+
 export default function AnalysisMonitor({ jobId }: AnalysisMonitorProps) {
-  const [stages, setStages] = useState([
-    { name: 'evaluate', status: 'pending' as const, confidence: undefined },
-    { name: 'analyze', status: 'pending' as const, confidence: undefined },
-    { name: 'refine', status: 'pending' as const, confidence: undefined },
-    { name: 'reiterate', status: 'pending' as const, confidence: undefined },
+  const [stages, setStages] = useState<Stage[]>([
+    { name: 'evaluate', status: 'pending', confidence: undefined },
+    { name: 'analyze', status: 'pending', confidence: undefined },
+    { name: 'refine', status: 'pending', confidence: undefined },
+    { name: 'reiterate', status: 'pending', confidence: undefined },
   ])
   
   const { data: job, isLoading } = useQuery({
@@ -41,9 +54,9 @@ export default function AnalysisMonitor({ jobId }: AnalysisMonitorProps) {
     
     const updatedStages = stages.map((stage) => {
       if (job.stages_completed?.includes(stage.name)) {
-        return { ...stage, status: 'completed' as const }
+        return { ...stage, status: 'completed' as StageStatus }
       } else if (job.current_stage === stage.name) {
-        return { ...stage, status: 'running' as const }
+        return { ...stage, status: 'running' as StageStatus }
       }
       return stage
     })
@@ -59,6 +72,16 @@ export default function AnalysisMonitor({ jobId }: AnalysisMonitorProps) {
       </Card>
     )
   }
+  
+  // Type guard for config
+  const getConfig = (): AnalysisConfig => {
+    if (typeof job.config === 'object' && job.config !== null) {
+      return job.config as AnalysisConfig
+    }
+    return {}
+  }
+  
+  const config = getConfig()
   
   return (
     <div className="space-y-6">
@@ -117,11 +140,11 @@ export default function AnalysisMonitor({ jobId }: AnalysisMonitorProps) {
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">AI Assistance:</span>
-              <span>{job.config?.enableAI ? 'Enabled' : 'Disabled'}</span>
+              <span>{config.enableAI ? 'Enabled' : 'Disabled'}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Stages:</span>
-              <span>{4 - (job.config?.skipStages?.length || 0)} of 4</span>
+              <span>{4 - (config.skipStages?.length || 0)} of 4</span>
             </div>
           </div>
         </CardContent>
