@@ -68,7 +68,8 @@ export default function StageResults({ conceptId, stage }: StageResultsProps) {
     )
   }
   
-  const stageOutput = analysis[`${stage}_output`] || {}
+  const stageOutput = analysis[`${stage}_output`] as Record<string, any> || {}
+  const confidenceScores = analysis.confidence_scores as Record<string, any> || {}
   
   return (
     <div className="space-y-6">
@@ -104,7 +105,7 @@ export default function StageResults({ conceptId, stage }: StageResultsProps) {
                 Overall Confidence
               </p>
               <p className="text-2xl font-bold">
-                {((analysis.confidence_scores?.overall || 0) * 100).toFixed(0)}%
+                {((confidenceScores.overall || 0) * 100).toFixed(0)}%
               </p>
             </div>
           </div>
@@ -138,7 +139,7 @@ export default function StageResults({ conceptId, stage }: StageResultsProps) {
         <TabsContent value="details" className="space-y-4">
           <MetricsDisplay
             metrics={stageOutput.metrics || {}}
-            uncertainties={analysis.uncertainty_assessment || {}}
+            uncertainties={analysis.uncertainty_assessment as Record<string, any> || {}}
           />
         </TabsContent>
         
@@ -147,10 +148,10 @@ export default function StageResults({ conceptId, stage }: StageResultsProps) {
             visualizations.map((viz) => (
               <div key={viz.id}>
                 {viz.type === 'network_graph' && (
-                  <ConceptNetworkGraph data={viz.data} />
+                  <ConceptNetworkGraph data={viz.data as any} />
                 )}
                 {viz.type === 'heatmap' && (
-                  <UncertaintyHeatmap data={viz.data} />
+                  <UncertaintyHeatmap data={viz.data as any} />
                 )}
               </div>
             ))
