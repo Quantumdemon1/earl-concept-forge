@@ -42,6 +42,8 @@ export default function StartAnalysisDialog({
   
   const startAnalysisMutation = useMutation({
     mutationFn: async () => {
+      console.log('Starting analysis for concept:', conceptId)
+      
       // Create analysis job record
       const { data, error } = await supabase
         .from('analysis_jobs')
@@ -55,7 +57,12 @@ export default function StartAnalysisDialog({
         .select()
         .single()
       
-      if (error) throw error
+      if (error) {
+        console.error('Error creating analysis job:', error)
+        throw error
+      }
+      
+      console.log('Analysis job created:', data)
       return data
     },
     onSuccess: (data) => {
@@ -67,6 +74,7 @@ export default function StartAnalysisDialog({
       navigate(`/concepts/${conceptId}/analysis/${data.id}`)
     },
     onError: (error) => {
+      console.error('Analysis mutation error:', error)
       toast({
         title: 'Error',
         description: error.message,

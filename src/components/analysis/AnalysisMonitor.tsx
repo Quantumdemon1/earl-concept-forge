@@ -37,13 +37,18 @@ export default function AnalysisMonitor({ jobId }: AnalysisMonitorProps) {
   const { data: job, isLoading } = useQuery({
     queryKey: ['analysis-job', jobId],
     queryFn: async () => {
+      console.log('Fetching analysis job:', jobId)
       const { data, error } = await supabase
         .from('analysis_jobs')
         .select('*')
         .eq('id', jobId)
         .single()
       
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching analysis job:', error)
+        throw error
+      }
+      console.log('Analysis job data:', data)
       return data
     },
     refetchInterval: 2000, // Poll every 2 seconds
