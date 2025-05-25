@@ -13,7 +13,8 @@ import {
   Filter, 
   Play,
   Eye,
-  MoreVertical
+  MoreVertical,
+  Lightbulb
 } from "lucide-react";
 import {
   DropdownMenu,
