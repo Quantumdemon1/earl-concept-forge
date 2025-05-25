@@ -16,9 +16,8 @@ interface DevelopmentSession {
   }
   isActive: boolean
   history: any[]
-  config: any
-  startedAt: string
-  lastUpdated: string
+  startedAt?: string
+  completedAt?: string
 }
 
 interface DevelopmentStore {
@@ -28,13 +27,12 @@ interface DevelopmentStore {
   
   // Actions
   startSession: (conceptId: string, config?: any) => Promise<string>
-  runIteration: (sessionId: string) => Promise<any>
+  runIteration: (sessionId: string) => Promise<void>
   pauseSession: (sessionId: string) => void
   resumeSession: (sessionId: string) => void
   getSession: (sessionId: string) => DevelopmentSession | undefined
   updateSession: (sessionId: string, updates: Partial<DevelopmentSession>) => void
   loadSession: (sessionId: string) => Promise<void>
-  deleteSession: (sessionId: string) => void
 }
 
 export const useDevelopmentStore = create<DevelopmentStore>()(
@@ -44,11 +42,8 @@ export const useDevelopmentStore = create<DevelopmentStore>()(
         activeSessions: new Map(),
         currentSessionId: null,
         
-        startSession: async (conceptId, config = {}) => {
+        startSession: async (conceptId, config) => {
           try {
-            console.log('Starting development session for concept:', conceptId)
-            
-            // Call edge function to start session
             const { data, error } = await supabase.functions.invoke('develop-concept', {
               body: { conceptId, config },
             })
@@ -68,9 +63,7 @@ export const useDevelopmentStore = create<DevelopmentStore>()(
               },
               isActive: true,
               history: [],
-              config,
               startedAt: new Date().toISOString(),
-              lastUpdated: new Date().toISOString(),
             }
             
             set((state) => ({
@@ -78,27 +71,23 @@ export const useDevelopmentStore = create<DevelopmentStore>()(
               currentSessionId: data.sessionId,
             }))
             
-            console.log('Development session started:', data.sessionId)
             return data.sessionId
           } catch (error) {
-            console.error('Error starting development session:', error)
+            console.error('Error starting session:', error)
             throw error
           }
         },
         
         runIteration: async (sessionId) => {
           const session = get().activeSessions.get(sessionId)
-          if (!session || !session.isActive) {
-            throw new Error('Session not found or inactive')
-          }
+          if (!session || !session.isActive) return
           
           try {
-            console.log('Running iteration for session:', sessionId)
-            
             const { data, error } = await supabase.functions.invoke('develop-concept', {
               body: { 
                 conceptId: session.conceptId,
                 sessionId,
+                action: 'iterate'
               },
             })
             
@@ -111,20 +100,11 @@ export const useDevelopmentStore = create<DevelopmentStore>()(
                 stage: data.stage || session.stage,
                 iteration: data.iteration || session.iteration + 1,
                 scores: data.scores || session.scores,
-                history: [...session.history, {
-                  iteration: data.iteration || session.iteration + 1,
-                  stage: data.stage || session.stage,
-                  timestamp: new Date().toISOString(),
-                  result: data,
-                }],
-                lastUpdated: new Date().toISOString(),
+                history: [...session.history, data],
               }
               sessions.set(sessionId, updatedSession)
               return { activeSessions: sessions }
             })
-            
-            console.log('Iteration completed:', data)
-            return data
           } catch (error) {
             console.error('Error running iteration:', error)
             throw error
@@ -132,32 +112,22 @@ export const useDevelopmentStore = create<DevelopmentStore>()(
         },
         
         pauseSession: (sessionId) => {
-          console.log('Pausing session:', sessionId)
           set((state) => {
             const sessions = new Map(state.activeSessions)
             const session = sessions.get(sessionId)
             if (session) {
-              sessions.set(sessionId, { 
-                ...session, 
-                isActive: false,
-                lastUpdated: new Date().toISOString(),
-              })
+              sessions.set(sessionId, { ...session, isActive: false })
             }
             return { activeSessions: sessions }
           })
         },
         
         resumeSession: (sessionId) => {
-          console.log('Resuming session:', sessionId)
           set((state) => {
             const sessions = new Map(state.activeSessions)
             const session = sessions.get(sessionId)
             if (session) {
-              sessions.set(sessionId, { 
-                ...session, 
-                isActive: true,
-                lastUpdated: new Date().toISOString(),
-              })
+              sessions.set(sessionId, { ...session, isActive: true })
             }
             return { activeSessions: sessions, currentSessionId: sessionId }
           })
@@ -172,11 +142,7 @@ export const useDevelopmentStore = create<DevelopmentStore>()(
             const sessions = new Map(state.activeSessions)
             const session = sessions.get(sessionId)
             if (session) {
-              sessions.set(sessionId, { 
-                ...session, 
-                ...updates,
-                lastUpdated: new Date().toISOString(),
-              })
+              sessions.set(sessionId, { ...session, ...updates })
             }
             return { activeSessions: sessions }
           })
@@ -205,29 +171,18 @@ export const useDevelopmentStore = create<DevelopmentStore>()(
               },
               isActive: data.is_active,
               history: data.llm_interactions || [],
-              config: data.config || {},
               startedAt: data.started_at,
-              lastUpdated: data.updated_at,
+              completedAt: data.completed_at,
             }
             
             set((state) => ({
               activeSessions: new Map(state.activeSessions).set(sessionId, session),
+              currentSessionId: sessionId,
             }))
           } catch (error) {
             console.error('Error loading session:', error)
             throw error
           }
-        },
-        
-        deleteSession: (sessionId) => {
-          set((state) => {
-            const sessions = new Map(state.activeSessions)
-            sessions.delete(sessionId)
-            return { 
-              activeSessions: sessions,
-              currentSessionId: state.currentSessionId === sessionId ? null : state.currentSessionId,
-            }
-          })
         },
       }),
       {
@@ -237,12 +192,13 @@ export const useDevelopmentStore = create<DevelopmentStore>()(
           currentSessionId: state.currentSessionId,
         }),
         onRehydrateStorage: () => (state) => {
-          if (state && Array.isArray(state.activeSessions)) {
-            state.activeSessions = new Map(state.activeSessions as [string, DevelopmentSession][])
+          if (state?.activeSessions) {
+            // Convert array back to Map
+            const sessionsArray = state.activeSessions as unknown as [string, DevelopmentSession][]
+            state.activeSessions = new Map(sessionsArray)
           }
         },
       }
-    ),
-    { name: 'development-store' }
+    )
   )
 )
