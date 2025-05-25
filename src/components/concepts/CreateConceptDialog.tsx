@@ -54,15 +54,11 @@ export default function CreateConceptDialog({
   
   const createMutation = useMutation({
     mutationFn: async (data: ConceptFormData) => {
-      if (!user) {
-        throw new Error('User not authenticated')
-      }
-
       console.log('Creating concept with data:', {
         name: data.name,
         description: data.description,
         domains: data.domains,
-        owner_id: user.id,
+        owner_id: user?.id || null,
       })
 
       const { data: concept, error } = await supabase
@@ -71,7 +67,7 @@ export default function CreateConceptDialog({
           name: data.name,
           description: data.description,
           domains: data.domains,
-          owner_id: user.id,
+          owner_id: user?.id || null,
         })
         .select()
         .single()
@@ -104,20 +100,7 @@ export default function CreateConceptDialog({
   })
   
   const onSubmit = (data: ConceptFormData) => {
-    if (!user) {
-      toast({
-        title: 'Error',
-        description: 'You must be logged in to create a concept',
-        variant: 'destructive',
-      })
-      return
-    }
-    
     createMutation.mutate(data)
-  }
-  
-  if (!user) {
-    return null
   }
   
   return (

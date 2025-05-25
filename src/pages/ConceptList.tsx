@@ -26,16 +26,11 @@ export default function ConceptList() {
   const { user } = useAuth()
   
   const { data: concepts, isLoading, error } = useQuery({
-    queryKey: ['concepts', searchTerm, user?.id],
+    queryKey: ['concepts', searchTerm],
     queryFn: async () => {
-      if (!user) {
-        throw new Error('User not authenticated')
-      }
-
       let query = supabase
         .from('concepts')
         .select('*')
-        .eq('owner_id', user.id)
         .order('created_at', { ascending: false })
       
       if (searchTerm) {
@@ -49,20 +44,7 @@ export default function ConceptList() {
       }
       return data
     },
-    enabled: !!user,
   })
-
-  if (!user) {
-    return (
-      <div className="space-y-6">
-        <Card>
-          <CardContent className="flex items-center justify-center py-8">
-            <p className="text-muted-foreground">Please log in to view your concepts</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
   
   if (error) {
     return (
@@ -130,6 +112,7 @@ export default function ConceptList() {
                     </CardTitle>
                     <CardDescription>
                       Created {formatDistanceToNow(new Date(concept.created_at))} ago
+                      {concept.owner_id ? '' : ' (Anonymous)'}
                     </CardDescription>
                   </div>
                   <Badge variant={
