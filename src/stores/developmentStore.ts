@@ -1,4 +1,3 @@
-
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
 import { supabase } from '@/lib/supabase'
@@ -164,10 +163,10 @@ export const useDevelopmentStore = create<DevelopmentStore>()(
               stage: data.stage,
               iteration: data.iteration_count,
               scores: {
-                completeness: data.completeness_score,
-                confidence: data.confidence_score,
-                feasibility: data.feasibility_score,
-                novelty: data.novelty_score,
+                completeness: data.completeness_score || 0,
+                confidence: data.confidence_score || 0,
+                feasibility: data.feasibility_score || 0,
+                novelty: data.novelty_score || 0,
               },
               isActive: data.is_active,
               history: Array.isArray(data.llm_interactions) ? data.llm_interactions : [],
@@ -192,10 +191,17 @@ export const useDevelopmentStore = create<DevelopmentStore>()(
           currentSessionId: state.currentSessionId,
         }),
         onRehydrateStorage: () => (state) => {
-          if (state?.activeSessions) {
-            // Convert array back to Map
-            const sessionsArray = state.activeSessions as unknown as [string, DevelopmentSession][]
-            state.activeSessions = new Map(sessionsArray)
+          if (state && Array.isArray(state.activeSessions)) {
+            try {
+              // Safely convert array back to Map with error handling
+              const sessionsArray = state.activeSessions as [string, DevelopmentSession][]
+              state.activeSessions = new Map(sessionsArray)
+            } catch (error) {
+              console.warn('Failed to rehydrate development sessions, resetting to empty Map:', error)
+              state.activeSessions = new Map()
+            }
+          } else {
+            state.activeSessions = new Map()
           }
         },
       }

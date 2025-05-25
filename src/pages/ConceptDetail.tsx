@@ -1,6 +1,5 @@
-
 import { useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, Navigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
@@ -13,16 +12,25 @@ import ExportPanel from '@/components/export/ExportPanel'
 import { ArrowLeft, Play, Eye, Zap, Brain, FileText } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 
+// UUID validation helper
+const isValidUUID = (uuid: string): boolean => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  return uuidRegex.test(uuid)
+}
+
 export default function ConceptDetail() {
   const { id } = useParams<{ id: string }>()
   const [showAnalysisDialog, setShowAnalysisDialog] = useState(false)
   const [activeTab, setActiveTab] = useState('overview')
   
-  const { data: concept, isLoading } = useQuery({
+  // Validate UUID parameter
+  if (!id || !isValidUUID(id)) {
+    return <Navigate to="/concepts/list" replace />
+  }
+  
+  const { data: concept, isLoading, error } = useQuery({
     queryKey: ['concept', id],
     queryFn: async () => {
-      if (!id) throw new Error('Concept ID is required')
-      
       const { data, error } = await supabase
         .from('concepts')
         .select('*')
@@ -32,14 +40,12 @@ export default function ConceptDetail() {
       if (error) throw error
       return data
     },
-    enabled: !!id,
+    enabled: !!id && isValidUUID(id),
   })
   
   const { data: analyses } = useQuery({
     queryKey: ['concept-analyses', id],
     queryFn: async () => {
-      if (!id) return []
-      
       const { data, error } = await supabase
         .from('analysis_jobs')
         .select('*')
@@ -49,14 +55,12 @@ export default function ConceptDetail() {
       if (error) throw error
       return data
     },
-    enabled: !!id,
+    enabled: !!id && isValidUUID(id),
   })
 
   const { data: developmentSession } = useQuery({
     queryKey: ['development-session', id],
     queryFn: async () => {
-      if (!id) return null
-      
       const { data, error } = await supabase
         .from('concept_development_sessions')
         .select('*')
@@ -67,7 +71,7 @@ export default function ConceptDetail() {
       if (error) throw error
       return data
     },
-    enabled: !!id,
+    enabled: !!id && isValidUUID(id),
   })
   
   if (isLoading) {
@@ -77,6 +81,18 @@ export default function ConceptDetail() {
           <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
           <div className="h-4 bg-gray-200 rounded w-1/2"></div>
         </div>
+      </div>
+    )
+  }
+  
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="flex items-center justify-center py-8">
+            <p className="text-destructive">Error loading concept: {error.message}</p>
+          </CardContent>
+        </Card>
       </div>
     )
   }
@@ -187,7 +203,7 @@ export default function ConceptDetail() {
                   <div>
                     <h4 className="text-sm font-medium mb-2">Domains</h4>
                     <div className="flex flex-wrap gap-1">
-                      {concept.domains.map((domain) => (
+                      {concept.domains.map((domain: string) => (
                         <Badge key={domain} variant="secondary" className="text-xs">
                           {domain}
                         </Badge>
