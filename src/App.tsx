@@ -10,6 +10,7 @@ import { ProtectedLayout } from "@/components/layout/ProtectedLayout";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Concepts from "./pages/Concepts";
+import ConceptList from "./pages/ConceptList";
 import ConceptDetail from "./pages/ConceptDetail";
 import AnalysisView from "./pages/AnalysisView";
 import Login from "./pages/Login";
@@ -50,6 +51,14 @@ const App = () => (
                 element={
                   <ProtectedLayout>
                     <Concepts />
+                  </ProtectedLayout>
+                }
+              />
+              <Route
+                path="/concepts/list"
+                element={
+                  <ProtectedLayout>
+                    <ConceptList />
                   </ProtectedLayout>
                 }
               />
