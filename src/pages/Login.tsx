@@ -29,6 +29,11 @@ export default function Login() {
     }
   };
 
+  const handleBypass = () => {
+    // Bypass authentication for testing
+    navigate('/dashboard');
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md">
@@ -67,6 +72,18 @@ export default function Login() {
               Sign In
             </Button>
           </form>
+          
+          {/* Bypass link for testing */}
+          <div className="mt-4 text-center">
+            <Button 
+              onClick={handleBypass}
+              variant="outline" 
+              className="w-full"
+            >
+              Test App (Bypass Login)
+            </Button>
+          </div>
+          
           <div className="mt-4 text-center text-sm">
             Don't have an account?{' '}
             <Link to="/register" className="text-primary hover:underline">
