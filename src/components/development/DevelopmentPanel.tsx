@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Play, Pause, Square, Settings } from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Play, Pause, Square, Settings, AlertCircle } from 'lucide-react'
 import { useDevelopment } from '@/hooks/useDevelopment'
 import { useDevelopmentProgress } from '@/hooks/useDevelopmentProgress'
 import DevelopmentProgress from './DevelopmentProgress'
@@ -31,6 +32,7 @@ export default function DevelopmentPanel({ conceptId, conceptName }: Development
     canStart,
     canPause,
     canResume,
+    error,
   } = useDevelopment(conceptId, {
     autoRun: true,
     maxIterations: 20,
@@ -90,6 +92,17 @@ export default function DevelopmentPanel({ conceptId, conceptName }: Development
           )}
         </div>
       </div>
+
+      {/* Error Display */}
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Development Error</AlertTitle>
+          <AlertDescription>
+            {error.message}
+          </AlertDescription>
+        </Alert>
+      )}
       
       {/* Status Overview */}
       {currentSession && (
@@ -176,6 +189,17 @@ export default function DevelopmentPanel({ conceptId, conceptName }: Development
             </div>
           </CardContent>
         </Card>
+      )}
+      
+      {/* Connection Status */}
+      {!currentSession && !isStarting && !error && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Ready to Start</AlertTitle>
+          <AlertDescription>
+            Click "Start Development" to begin automated concept development using AI.
+          </AlertDescription>
+        </Alert>
       )}
       
       {/* Detailed Views */}

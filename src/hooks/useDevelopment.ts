@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSessionManagement } from '@/hooks/development/useSessionManagement'
 import { useSessionPersistence } from '@/hooks/development/useSessionPersistence'
@@ -57,6 +58,11 @@ export function useDevelopment(conceptId: string, options: UseDevelopmentOptions
   const maxIterations = options.maxIterations || 20
   const iterationDelay = options.iterationDelay || 2000
   
+  // Clear error when starting new operations
+  const clearError = useCallback(() => {
+    setError(null)
+  }, [])
+  
   // Update progress when session changes
   useEffect(() => {
     if (currentSessionId) {
@@ -86,7 +92,7 @@ export function useDevelopment(conceptId: string, options: UseDevelopmentOptions
     
     runningRef.current = true
     setIsRunning(true)
-    setError(null)
+    clearError()
     
     console.log('Starting development loop for session:', sessionId)
     
@@ -129,12 +135,13 @@ export function useDevelopment(conceptId: string, options: UseDevelopmentOptions
           await new Promise(resolve => setTimeout(resolve, iterationDelay))
         } catch (iterationError) {
           console.error('Iteration error:', iterationError)
-          setError(iterationError as Error)
-          options.onError?.(iterationError as Error)
+          const error = iterationError as Error
+          setError(error)
+          options.onError?.(error)
           
           toast({
             title: 'Development Error',
-            description: `Error in iteration: ${(iterationError as Error).message}`,
+            description: `Error in iteration: ${error.message}`,
             variant: 'destructive',
           })
           break
@@ -142,26 +149,27 @@ export function useDevelopment(conceptId: string, options: UseDevelopmentOptions
       }
     } catch (error) {
       console.error('Development loop error:', error)
-      setError(error as Error)
-      options.onError?.(error as Error)
+      const err = error as Error
+      setError(err)
+      options.onError?.(err)
       
       toast({
         title: 'Development Failed',
-        description: `Development process failed: ${(error as Error).message}`,
+        description: `Development process failed: ${err.message}`,
         variant: 'destructive',
       })
     } finally {
       setIsRunning(false)
       runningRef.current = false
     }
-  }, [getSession, runIteration, maxIterations, thresholds, iterationDelay, options, toast])
+  }, [getSession, runIteration, maxIterations, thresholds, iterationDelay, options, toast, clearError])
   
   // Start development
   const start = useCallback(async () => {
     if (isStarting || isRunning) return
     
     setIsStarting(true)
-    setError(null)
+    clearError()
     
     try {
       console.log('Starting development for concept:', conceptId)
@@ -185,12 +193,13 @@ export function useDevelopment(conceptId: string, options: UseDevelopmentOptions
       }
     } catch (error) {
       console.error('Error starting development:', error)
-      setError(error as Error)
-      options.onError?.(error as Error)
+      const err = error as Error
+      setError(err)
+      options.onError?.(err)
       
       toast({
         title: 'Failed to Start',
-        description: `Could not start development: ${(error as Error).message}`,
+        description: `Could not start development: ${err.message}`,
         variant: 'destructive',
       })
     } finally {
@@ -205,7 +214,8 @@ export function useDevelopment(conceptId: string, options: UseDevelopmentOptions
     runDevelopment, 
     isStarting, 
     isRunning,
-    toast
+    toast,
+    clearError
   ])
   
   // Pause development
@@ -215,18 +225,20 @@ export function useDevelopment(conceptId: string, options: UseDevelopmentOptions
       runningRef.current = false
       pauseSession(currentSessionId)
       setIsRunning(false)
+      clearError()
       
       toast({
         title: 'Development Paused',
         description: 'You can resume development at any time.',
       })
     }
-  }, [currentSessionId, pauseSession, toast])
+  }, [currentSessionId, pauseSession, toast, clearError])
   
   // Resume development
   const resume = useCallback(() => {
     if (currentSessionId) {
       console.log('Resuming development session:', currentSessionId)
+      clearError()
       resumeSession(currentSessionId)
       runDevelopment(currentSessionId)
       
@@ -235,11 +247,12 @@ export function useDevelopment(conceptId: string, options: UseDevelopmentOptions
         description: 'Continuing automated concept development.',
       })
     }
-  }, [currentSessionId, resumeSession, runDevelopment, toast])
+  }, [currentSessionId, resumeSession, runDevelopment, toast, clearError])
   
   // Load existing session
   const loadExistingSession = useCallback(async (sessionId: string) => {
     try {
+      clearError()
       await loadSession(sessionId)
       toast({
         title: 'Session Loaded',
@@ -247,15 +260,16 @@ export function useDevelopment(conceptId: string, options: UseDevelopmentOptions
       })
     } catch (error) {
       console.error('Error loading session:', error)
-      setError(error as Error)
+      const err = error as Error
+      setError(err)
       
       toast({
         title: 'Failed to Load Session',
-        description: `Could not load session: ${(error as Error).message}`,
+        description: `Could not load session: ${err.message}`,
         variant: 'destructive',
       })
     }
-  }, [loadSession, toast])
+  }, [loadSession, toast, clearError])
   
   // Cleanup on unmount
   useEffect(() => {
