@@ -1,68 +1,122 @@
 
+import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
+import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/hooks/useAuth'
 import { MainLayout } from "@/components/layout/main-layout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { Link } from "react-router-dom";
-import { 
-  BarChart3, 
-  Lightbulb, 
-  Clock, 
-  TrendingUp, 
-  Plus,
-  ArrowRight 
-} from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Progress } from '@/components/ui/progress'
+import { Badge } from '@/components/ui/badge'
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts'
+import {
+  Brain,
+  TrendingUp,
+  Clock,
+  CheckCircle2,
+  ArrowRight,
+} from 'lucide-react'
 
-const statusData = [
-  { name: 'In Progress', value: 12, color: '#8b5cf6' },
-  { name: 'Completed', value: 8, color: '#10b981' },
-  { name: 'Pending', value: 5, color: '#f59e0b' },
-  { name: 'Draft', value: 3, color: '#6b7280' },
-];
-
-const trendData = [
-  { month: 'Jan', concepts: 15, completed: 8 },
-  { month: 'Feb', concepts: 20, completed: 12 },
-  { month: 'Mar', concepts: 25, completed: 18 },
-  { month: 'Apr', concepts: 28, completed: 22 },
-];
-
-const recentConcepts = [
-  { id: 1, name: "Artificial Intelligence Ethics", status: "analyze", progress: 65 },
-  { id: 2, name: "Quantum Computing Principles", status: "refine", progress: 85 },
-  { id: 3, name: "Sustainable Energy Systems", status: "evaluate", progress: 25 },
-  { id: 4, name: "Neural Network Architecture", status: "reiterate", progress: 90 },
-];
-
-const Dashboard = () => {
+export default function Dashboard() {
+  const { user } = useAuth()
+  
+  const { data: stats } = useQuery({
+    queryKey: ['dashboard-stats'],
+    queryFn: async () => {
+      // Fetch various statistics
+      const [concepts, jobs, analyses] = await Promise.all([
+        supabase
+          .from('concepts')
+          .select('status', { count: 'exact' })
+          .eq('owner_id', user?.id),
+        supabase
+          .from('analysis_jobs')
+          .select('status, created_at', { count: 'exact' })
+          .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
+        supabase
+          .from('concept_analyses')
+          .select('stage, confidence_scores')
+          .order('created_at', { ascending: false })
+          .limit(10),
+      ])
+      
+      return {
+        totalConcepts: concepts.count || 0,
+        conceptsByStatus: concepts.data || [],
+        recentJobs: jobs.data || [],
+        recentAnalyses: analyses.data || [],
+      }
+    },
+  })
+  
+  const { data: recentConcepts } = useQuery({
+    queryKey: ['recent-concepts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('concepts')
+        .select('*')
+        .eq('owner_id', user?.id)
+        .order('created_at', { ascending: false })
+        .limit(5)
+      
+      if (error) throw error
+      return data
+    },
+  })
+  
+  const statusColors = {
+    draft: '#6b7280',
+    evaluating: '#3b82f6',
+    analyzing: '#8b5cf6',
+    refining: '#f59e0b',
+    reiterating: '#10b981',
+    completed: '#059669',
+  }
+  
+  const statusData = Object.entries(
+    stats?.conceptsByStatus.reduce((acc: Record<string, number>, item: any) => {
+      acc[item.status] = (acc[item.status] || 0) + 1
+      return acc
+    }, {} as Record<string, number>) || {}
+  ).map(([status, count]) => ({
+    name: status,
+    value: count,
+    fill: statusColors[status as keyof typeof statusColors] || '#6b7280',
+  }))
+  
   return (
     <MainLayout>
       <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold">Dashboard</h1>
-            <p className="text-muted-foreground">Monitor your concept analysis progress</p>
-          </div>
-          <Button asChild>
-            <Link to="/concepts/new">
-              <Plus className="mr-2 h-4 w-4" />
-              New Concept
-            </Link>
-          </Button>
+        {/* Welcome Header */}
+        <div>
+          <h1 className="text-3xl font-bold">Welcome back!</h1>
+          <p className="text-muted-foreground">
+            Here's an overview of your EARL framework analyses
+          </p>
         </div>
-
-        {/* Stats Cards */}
+        
+        {/* Stats Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Concepts</CardTitle>
-              <Lightbulb className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">
+                Total Concepts
+              </CardTitle>
+              <Brain className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">28</div>
+              <div className="text-2xl font-bold">{stats?.totalConcepts || 0}</div>
               <p className="text-xs text-muted-foreground">
                 +12% from last month
               </p>
@@ -71,115 +125,114 @@ const Dashboard = () => {
           
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Analyses</CardTitle>
-              <BarChart3 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">12</div>
-              <p className="text-xs text-muted-foreground">
-                Currently in progress
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg. Processing Time</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">2.4h</div>
-              <p className="text-xs text-muted-foreground">
-                -8% improvement
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Completion Rate</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Active Analyses
+              </CardTitle>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">78%</div>
+              <div className="text-2xl font-bold">
+                {stats?.recentJobs.filter((j: any) => j.status === 'running').length || 0}
+              </div>
               <p className="text-xs text-muted-foreground">
-                +5% from last month
+                Currently processing
               </p>
             </CardContent>
           </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Avg. Processing Time
+              </CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">4.2m</div>
+              <p className="text-xs text-muted-foreground">
+                -23% from last week
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Completion Rate
+              </CardTitle>
+              <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">94%</div>
+              <Progress value={94} className="mt-2" />
+            </CardContent>
+          </Card>
         </div>
-
-        {/* Charts Row */}
+        
+        {/* Charts */}
         <div className="grid gap-4 md:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle>Concept Status Distribution</CardTitle>
-              <CardDescription>Current status of all concepts</CardDescription>
+              <CardTitle>Concepts by Status</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={200}>
+              <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
                     data={statusData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={40}
+                    labelLine={false}
+                    label={({ name, percent }) => 
+                      `${name} ${(percent * 100).toFixed(0)}%`
+                    }
                     outerRadius={80}
-                    paddingAngle={2}
+                    fill="#8884d8"
                     dataKey="value"
                   >
                     {statusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
                     ))}
                   </Pie>
                   <Tooltip />
                 </PieChart>
               </ResponsiveContainer>
-              <div className="flex justify-center gap-4 mt-4">
-                {statusData.map((item) => (
-                  <div key={item.name} className="flex items-center gap-2">
-                    <div 
-                      className="w-3 h-3 rounded-full" 
-                      style={{ backgroundColor: item.color }}
-                    />
-                    <span className="text-sm text-muted-foreground">{item.name}</span>
-                  </div>
-                ))}
-              </div>
             </CardContent>
           </Card>
-
+          
           <Card>
             <CardHeader>
-              <CardTitle>Monthly Progress</CardTitle>
-              <CardDescription>Concepts created vs completed</CardDescription>
+              <CardTitle>Analysis Confidence Trends</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={trendData}>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart
+                  data={[
+                    { stage: 'Evaluate', confidence: 0.82 },
+                    { stage: 'Analyze', confidence: 0.78 },
+                    { stage: 'Refine', confidence: 0.85 },
+                    { stage: 'Reiterate', confidence: 0.91 },
+                  ]}
+                >
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
+                  <XAxis dataKey="stage" />
+                  <YAxis domain={[0, 1]} />
                   <Tooltip />
-                  <Bar dataKey="concepts" fill="#8b5cf6" name="Created" />
-                  <Bar dataKey="completed" fill="#10b981" name="Completed" />
+                  <Bar dataKey="confidence" fill="#8b5cf6" />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
         </div>
-
+        
         {/* Recent Concepts */}
         <Card>
           <CardHeader>
-            <div className="flex justify-between items-center">
-              <div>
-                <CardTitle>Recent Concepts</CardTitle>
-                <CardDescription>Latest concept analyses</CardDescription>
-              </div>
-              <Button variant="outline" asChild>
+            <div className="flex items-center justify-between">
+              <CardTitle>Recent Concepts</CardTitle>
+              <Button asChild variant="ghost" size="sm">
                 <Link to="/concepts">
-                  View All
+                  View all
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
@@ -187,26 +240,29 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentConcepts.map((concept) => (
-                <div key={concept.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                  <div className="flex-1">
-                    <h4 className="font-medium">{concept.name}</h4>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="secondary" className="capitalize">
-                        {concept.status}
-                      </Badge>
-                      <span className="text-sm text-muted-foreground">
-                        {concept.progress}% complete
-                      </span>
-                    </div>
-                    <Progress value={concept.progress} className="mt-2 w-full max-w-xs" />
+              {recentConcepts?.map((concept) => (
+                <div
+                  key={concept.id}
+                  className="flex items-center justify-between rounded-lg border p-4"
+                >
+                  <div>
+                    <p className="font-medium">{concept.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {concept.domains?.join(', ') || 'No domains'}
+                    </p>
                   </div>
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link to={`/concepts/${concept.id}`}>
-                      View
-                      <ArrowRight className="ml-2 h-3 w-3" />
-                    </Link>
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant={
+                        concept.status === 'completed' ? 'default' : 'secondary'
+                      }
+                    >
+                      {concept.status}
+                    </Badge>
+                    <Button asChild size="sm" variant="outline">
+                      <Link to={`/concepts/${concept.id}`}>View</Link>
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -214,7 +270,5 @@ const Dashboard = () => {
         </Card>
       </div>
     </MainLayout>
-  );
-};
-
-export default Dashboard;
+  )
+}
