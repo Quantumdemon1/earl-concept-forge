@@ -28,25 +28,46 @@ export default function ExportPanel({ concept }: ExportPanelProps) {
   const { data: exportData, isLoading } = useQuery({
     queryKey: ['export-data', concept.id],
     queryFn: async () => {
-      const [analyses, development, visualizations] = await Promise.all([
+      const [analyses, development, visualizations, developmentIterations] = await Promise.all([
         supabase
           .from('concept_analyses')
           .select('*')
-          .eq('concept_id', concept.id),
+          .eq('concept_id', concept.id)
+          .order('created_at', { ascending: false }),
         supabase
           .from('concept_development_sessions')
-          .select('*, development_iterations(*)')
-          .eq('concept_id', concept.id),
+          .select('*')
+          .eq('concept_id', concept.id)
+          .order('created_at', { ascending: false }),
         supabase
           .from('visualizations')
           .select('*')
-          .eq('concept_id', concept.id),
+          .eq('concept_id', concept.id)
+          .order('created_at', { ascending: false }),
+        // Fetch development iterations for additional detail
+        supabase
+          .from('development_iterations')
+          .select(`
+            *,
+            session:concept_development_sessions!session_id(*)
+          `)
+          .eq('session.concept_id', concept.id)
+          .order('created_at', { ascending: false })
       ])
+      
+      // Enhanced development data with iterations
+      const enhancedDevelopment = development.data?.map(session => ({
+        ...session,
+        development_iterations: developmentIterations.data?.filter(
+          iter => iter.session_id === session.id
+        ) || []
+      })) || []
       
       return {
         analyses: analyses.data || [],
-        development: development.data || [],
+        development: enhancedDevelopment,
         visualizations: visualizations.data || [],
+        developmentIterations: developmentIterations.data || []
       }
     },
   })
@@ -68,7 +89,7 @@ export default function ExportPanel({ concept }: ExportPanelProps) {
       
       toast({
         title: 'Export Successful',
-        description: `${concept.name} has been exported as ${exportFormat.toUpperCase()}`,
+        description: `${concept.name} has been exported as ${exportFormat.toUpperCase()} with complete development data including LLM interactions, prompts, and responses.`,
       })
     } catch (error) {
       console.error('Export error:', error)
@@ -99,6 +120,18 @@ export default function ExportPanel({ concept }: ExportPanelProps) {
   
   return (
     <div className="space-y-6">
+      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <h3 className="font-medium text-blue-900 mb-2">Export Includes:</h3>
+        <ul className="text-sm text-blue-800 space-y-1">
+          <li>• Complete LLM interactions and responses</li>
+          <li>• Detailed prompts used in each iteration</li>
+          <li>• Extracted components, research, and validations</li>
+          <li>• Quality scores and progression metrics</li>
+          <li>• Development session configurations</li>
+          <li>• EARL analysis results and outputs</li>
+        </ul>
+      </div>
+      
       <ExportFormatSelector 
         value={exportFormat} 
         onChange={setExportFormat} 
