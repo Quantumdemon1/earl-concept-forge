@@ -1,3 +1,4 @@
+
 import { DataExtractionService } from './dataExtractionService'
 
 export interface DeliverableComponent {
@@ -106,7 +107,7 @@ export class DeliverableCompilerService {
         components: allComponents,
         architecture: this.inferArchitecture(allComponents, extractedData),
         technicalRequirements: this.consolidateTechnicalRequirements(extractedData),
-        integrations: this.identifyIntegrations(allComponents, extractedData)
+        integrations: this.identifyIntegrations(allComponents)
       },
       implementationPlan: implementationStrategy,
       validationResults: validationSummary,
