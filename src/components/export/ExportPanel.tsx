@@ -214,10 +214,12 @@ export default function ExportPanel({ conceptId, conceptName, conceptData }: Exp
             </CardHeader>
             <CardContent className="space-y-4">
               <ExportFormatSelector
-                onFormatChange={handleFormatChange}
+                value={selectedFormat}
+                onChange={handleFormatChange}
               />
               <DeliverableTemplateSelector
-                onTemplateChange={handleTemplateChange}
+                value={selectedTemplate}
+                onChange={handleTemplateChange}
               />
               <ExportOptionsSelector
                 options={exportOptions}
