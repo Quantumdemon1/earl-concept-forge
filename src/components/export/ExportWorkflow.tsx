@@ -220,7 +220,7 @@ export default function ExportWorkflow({
             isLoading={isLoadingSmartQuestions}
             answeredQuestions={answeredQuestions}
             onAnswerQuestion={handleAnswerQuestion}
-            isProcessingQuestion={isQuestionProcessing}
+            isProcessingQuestion={smartQuestions?.nextBestQuestion ? isQuestionProcessing(smartQuestions.nextBestQuestion.id) : false}
             isProcessing={isProcessing}
           />
         </TabsContent>
