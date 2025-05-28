@@ -17,3 +17,6 @@ enable_signup = true
 
 [functions.develop-concept]
 verify_jwt = true
+
+[functions.auto-enhance-deliverable]
+verify_jwt = true

@@ -283,6 +283,50 @@ export type Database = {
           },
         ]
       }
+      enhancement_iterations: {
+        Row: {
+          concept_id: string
+          created_at: string
+          enhanced_deliverable: Json
+          enhanced_sections: string[]
+          id: string
+          original_deliverable: Json
+          quality_improvement: Json
+          question_answers: Json
+          updated_at: string
+        }
+        Insert: {
+          concept_id: string
+          created_at?: string
+          enhanced_deliverable: Json
+          enhanced_sections?: string[]
+          id?: string
+          original_deliverable: Json
+          quality_improvement?: Json
+          question_answers?: Json
+          updated_at?: string
+        }
+        Update: {
+          concept_id?: string
+          created_at?: string
+          enhanced_deliverable?: Json
+          enhanced_sections?: string[]
+          id?: string
+          original_deliverable?: Json
+          quality_improvement?: Json
+          question_answers?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enhancement_iterations_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "concepts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       external_research_cache: {
         Row: {
           concept_id: string | null

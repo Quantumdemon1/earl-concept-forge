@@ -19,6 +19,7 @@ interface ExportWorkflowProps {
   gapAnalysis: GapAnalysisResult
   enhancementQuestions: EnhancementQuestion[]
   conceptName: string
+  conceptId: string // Add conceptId prop
   onRecompile: () => void
   onExport: () => void
   isRecompiling?: boolean
@@ -30,6 +31,7 @@ export default function ExportWorkflow({
   gapAnalysis,
   enhancementQuestions,
   conceptName,
+  conceptId, // Receive conceptId prop
   onRecompile,
   onExport,
   isRecompiling = false,
@@ -109,7 +111,7 @@ export default function ExportWorkflow({
 
     try {
       const result = await processQuestion(
-        'concept-id', // This should come from props
+        conceptId, // Use the actual conceptId prop
         compiledDeliverable,
         question,
         answer
