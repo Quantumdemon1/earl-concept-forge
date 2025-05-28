@@ -1,10 +1,10 @@
 
+import React from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
-import { TrendingUp, Target, CheckCircle, AlertTriangle } from 'lucide-react'
-import type { QualityAnalysis } from '@/services/deliverableEnhancer'
-import type { GapAnalysisResult } from '@/services/gapAnalysisService'
+import { Progress } from '@/components/ui/progress'
+import { CheckCircle, AlertCircle, Clock, TrendingUp } from 'lucide-react'
+import type { QualityAnalysis, GapAnalysisResult } from '@/services/gapAnalysisService'
 
 interface DeliverableQualityDashboardProps {
   qualityAnalysis: QualityAnalysis
@@ -23,152 +23,114 @@ export default function DeliverableQualityDashboard({
     return 'text-red-600'
   }
 
-  const getScoreIcon = (score: number) => {
-    if (score >= 80) return <CheckCircle className="h-4 w-4 text-green-600" />
-    if (score >= 60) return <Target className="h-4 w-4 text-yellow-600" />
-    return <AlertTriangle className="h-4 w-4 text-red-600" />
+  const getScoreBadgeVariant = (score: number) => {
+    if (score >= 80) return 'default'
+    if (score >= 60) return 'secondary'
+    return 'destructive'
   }
 
-  const overallScore = Math.round((
-    qualityAnalysis.completenessScore +
-    qualityAnalysis.actionabilityScore +
-    qualityAnalysis.clarityScore +
-    qualityAnalysis.marketReadinessScore
-  ) / 4)
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5" />
-            Quality Dashboard - {conceptName}
+            Quality Overview for {conceptName}
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            {/* Overall Score */}
-            <div className="lg:col-span-1">
-              <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border">
-                <div className={`text-3xl font-bold ${getScoreColor(overallScore)}`}>
-                  {overallScore}%
-                </div>
-                <div className="text-sm text-gray-600 mt-1">Overall</div>
-                <div className="mt-2">{getScoreIcon(overallScore)}</div>
-              </div>
-            </div>
-
-            {/* Individual Metrics */}
-            <div className="lg:col-span-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center p-3 bg-white border rounded-lg">
-                <div className={`text-2xl font-bold ${getScoreColor(qualityAnalysis.completenessScore)}`}>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Completeness</span>
+                <Badge variant={getScoreBadgeVariant(qualityAnalysis.completenessScore)}>
                   {qualityAnalysis.completenessScore}%
-                </div>
-                <div className="text-xs text-gray-600">Completeness</div>
-                <Progress value={qualityAnalysis.completenessScore} className="mt-2 h-2" />
+                </Badge>
               </div>
-
-              <div className="text-center p-3 bg-white border rounded-lg">
-                <div className={`text-2xl font-bold ${getScoreColor(qualityAnalysis.actionabilityScore)}`}>
-                  {qualityAnalysis.actionabilityScore}%
-                </div>
-                <div className="text-xs text-gray-600">Actionability</div>
-                <Progress value={qualityAnalysis.actionabilityScore} className="mt-2 h-2" />
-              </div>
-
-              <div className="text-center p-3 bg-white border rounded-lg">
-                <div className={`text-2xl font-bold ${getScoreColor(qualityAnalysis.clarityScore)}`}>
+              <Progress value={qualityAnalysis.completenessScore} className="h-2" />
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Clarity</span>
+                <Badge variant={getScoreBadgeVariant(qualityAnalysis.clarityScore)}>
                   {qualityAnalysis.clarityScore}%
-                </div>
-                <div className="text-xs text-gray-600">Clarity</div>
-                <Progress value={qualityAnalysis.clarityScore} className="mt-2 h-2" />
+                </Badge>
               </div>
-
-              <div className="text-center p-3 bg-white border rounded-lg">
-                <div className={`text-2xl font-bold ${getScoreColor(qualityAnalysis.marketReadinessScore)}`}>
+              <Progress value={qualityAnalysis.clarityScore} className="h-2" />
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Actionability</span>
+                <Badge variant={getScoreBadgeVariant(qualityAnalysis.actionabilityScore)}>
+                  {qualityAnalysis.actionabilityScore}%
+                </Badge>
+              </div>
+              <Progress value={qualityAnalysis.actionabilityScore} className="h-2" />
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Market Readiness</span>
+                <Badge variant={getScoreBadgeVariant(qualityAnalysis.marketReadinessScore)}>
                   {qualityAnalysis.marketReadinessScore}%
-                </div>
-                <div className="text-xs text-gray-600">Market Ready</div>
-                <Progress value={qualityAnalysis.marketReadinessScore} className="mt-2 h-2" />
+                </Badge>
               </div>
+              <Progress value={qualityAnalysis.marketReadinessScore} className="h-2" />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Gap Analysis Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {gapAnalysis.missingComponents.length > 0 && (
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Missing Components</CardTitle>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-amber-600">
+              <AlertCircle className="h-5 w-5" />
+              Missing Components
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600 mb-2">
-              {gapAnalysis.missingComponents.length}
+            <div className="space-y-2">
+              {gapAnalysis.missingComponents.slice(0, 5).map((component, index) => (
+                <div key={index} className="flex items-center gap-2 text-sm">
+                  <Clock className="h-4 w-4 text-amber-500" />
+                  <span>{component}</span>
+                </div>
+              ))}
+              {gapAnalysis.missingComponents.length > 5 && (
+                <p className="text-sm text-muted-foreground">
+                  +{gapAnalysis.missingComponents.length - 5} more components
+                </p>
+              )}
             </div>
-            {gapAnalysis.missingComponents.length > 0 ? (
-              <div className="space-y-1">
-                {gapAnalysis.missingComponents.slice(0, 2).map((component, index) => (
-                  <Badge key={index} variant="outline" className="text-xs">
-                    {component.substring(0, 30)}...
-                  </Badge>
-                ))}
-                {gapAnalysis.missingComponents.length > 2 && (
-                  <Badge variant="outline" className="text-xs">
-                    +{gapAnalysis.missingComponents.length - 2} more
-                  </Badge>
-                )}
-              </div>
-            ) : (
-              <p className="text-sm text-green-600">All components identified</p>
-            )}
           </CardContent>
         </Card>
+      )}
 
+      {gapAnalysis.recommendedActions.length > 0 && (
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Weak Sections</CardTitle>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              Recommended Actions
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600 mb-2">
-              {gapAnalysis.weakSections.length}
-            </div>
-            {gapAnalysis.weakSections.length > 0 ? (
-              <div className="space-y-1">
-                {gapAnalysis.weakSections.slice(0, 2).map((section, index) => (
-                  <Badge key={index} variant="outline" className="text-xs">
-                    {section.substring(0, 30)}...
-                  </Badge>
-                ))}
-                {gapAnalysis.weakSections.length > 2 && (
-                  <Badge variant="outline" className="text-xs">
-                    +{gapAnalysis.weakSections.length - 2} more
-                  </Badge>
-                )}
-              </div>
-            ) : (
-              <p className="text-sm text-green-600">No weak sections detected</p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Improvement Areas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600 mb-2">
-              {qualityAnalysis.suggestions.filter(s => s.priority === 'high').length}
-            </div>
-            <p className="text-sm text-gray-600">High priority suggestions</p>
-            <div className="mt-2">
-              <Badge variant="outline" className="text-xs">
-                {qualityAnalysis.suggestions.length} total suggestions
-              </Badge>
+            <div className="space-y-2">
+              {gapAnalysis.recommendedActions.slice(0, 3).map((action, index) => (
+                <div key={index} className="flex items-start gap-2 text-sm">
+                  <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-green-600 text-xs font-medium">{index + 1}</span>
+                  </div>
+                  <span>{action}</span>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
-      </div>
+      )}
     </div>
   )
 }

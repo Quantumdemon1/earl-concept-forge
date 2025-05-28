@@ -3,242 +3,250 @@ import type { CompiledDeliverable } from './deliverableCompiler'
 
 export interface EnhancementSuggestion {
   section: string
-  issue: string
   suggestion: string
   priority: 'high' | 'medium' | 'low'
+  impact: string
 }
 
 export interface QualityAnalysis {
   completenessScore: number
-  actionabilityScore: number
   clarityScore: number
+  actionabilityScore: number
   marketReadinessScore: number
+  overallScore: number
   suggestions: EnhancementSuggestion[]
 }
 
 export class DeliverableEnhancerService {
   static analyzeQuality(deliverable: CompiledDeliverable): QualityAnalysis {
-    const suggestions: EnhancementSuggestion[] = []
-    let completenessScore = 0
-    let actionabilityScore = 0
-    let clarityScore = 0
-    let marketReadinessScore = 0
+    console.log('Analyzing deliverable quality:', deliverable)
 
-    // Analyze project overview completeness
-    if (!deliverable.projectOverview.problemStatement || deliverable.projectOverview.problemStatement.includes('needs to be defined')) {
-      suggestions.push({
-        section: 'Project Overview',
-        issue: 'Problem statement is incomplete or generic',
-        suggestion: 'Define a specific, measurable problem that the solution addresses',
-        priority: 'high'
-      })
-    } else {
-      completenessScore += 15
-      clarityScore += 20
-    }
+    // Calculate completeness score
+    const completenessScore = this.calculateCompletenessScore(deliverable)
+    
+    // Calculate clarity score
+    const clarityScore = this.calculateClarityScore(deliverable)
+    
+    // Calculate actionability score
+    const actionabilityScore = this.calculateActionabilityScore(deliverable)
+    
+    // Calculate market readiness score
+    const marketReadinessScore = this.calculateMarketReadinessScore(deliverable)
+    
+    // Calculate overall score
+    const overallScore = Math.round(
+      (completenessScore + clarityScore + actionabilityScore + marketReadinessScore) / 4
+    )
 
-    if (!deliverable.projectOverview.solutionSummary || deliverable.projectOverview.solutionSummary.includes('needs to be developed')) {
-      suggestions.push({
-        section: 'Project Overview',
-        issue: 'Solution summary is incomplete',
-        suggestion: 'Provide a clear, concrete description of how the solution works',
-        priority: 'high'
-      })
-    } else {
-      completenessScore += 15
-      actionabilityScore += 20
-    }
-
-    // Analyze technical specification
-    if (deliverable.technicalSpecification.components.length === 0) {
-      suggestions.push({
-        section: 'Technical Specification',
-        issue: 'No technical components identified',
-        suggestion: 'Break down the solution into specific technical components and features',
-        priority: 'high'
-      })
-    } else {
-      completenessScore += 20
-      actionabilityScore += 25
-    }
-
-    const highPriorityComponents = deliverable.technicalSpecification.components.filter(c => c.priority === 'high')
-    if (highPriorityComponents.length === 0) {
-      suggestions.push({
-        section: 'Technical Specification',
-        issue: 'No high-priority components identified',
-        suggestion: 'Identify which components are critical for MVP functionality',
-        priority: 'medium'
-      })
-    } else {
-      actionabilityScore += 15
-    }
-
-    // Analyze market analysis
-    if (deliverable.marketAnalysis.opportunities.length === 0) {
-      suggestions.push({
-        section: 'Market Analysis',
-        issue: 'No market opportunities identified',
-        suggestion: 'Research and identify specific market opportunities for this solution',
-        priority: 'medium'
-      })
-    } else {
-      marketReadinessScore += 25
-    }
-
-    if (deliverable.marketAnalysis.competitiveAdvantages.length === 0) {
-      suggestions.push({
-        section: 'Market Analysis',
-        issue: 'No competitive advantages defined',
-        suggestion: 'Identify what makes this solution unique compared to alternatives',
-        priority: 'medium'
-      })
-    } else {
-      marketReadinessScore += 25
-    }
-
-    // Analyze implementation plan
-    if (deliverable.implementationPlan.phases.length === 0) {
-      suggestions.push({
-        section: 'Implementation Plan',
-        issue: 'No implementation phases defined',
-        suggestion: 'Create a phased approach to building and launching the solution',
-        priority: 'high'
-      })
-    } else {
-      actionabilityScore += 20
-      completenessScore += 20
-    }
-
-    const phasesWithDeliverables = deliverable.implementationPlan.phases.filter(p => p.deliverables.length > 0)
-    if (phasesWithDeliverables.length < deliverable.implementationPlan.phases.length) {
-      suggestions.push({
-        section: 'Implementation Plan',
-        issue: 'Some phases lack specific deliverables',
-        suggestion: 'Define concrete deliverables for each implementation phase',
-        priority: 'medium'
-      })
-    } else {
-      actionabilityScore += 20
-    }
-
-    // Analyze validation results
-    if (deliverable.validationResults.recommendations.length === 0) {
-      suggestions.push({
-        section: 'Validation Results',
-        issue: 'No actionable recommendations provided',
-        suggestion: 'Generate specific recommendations based on analysis and validation',
-        priority: 'medium'
-      })
-    } else {
-      actionabilityScore += 10
-      marketReadinessScore += 20
-    }
-
-    // Analyze next steps
-    if (deliverable.nextSteps.immediate.length === 0) {
-      suggestions.push({
-        section: 'Next Steps',
-        issue: 'No immediate action items defined',
-        suggestion: 'Define 3-5 concrete actions that can be taken in the next 30 days',
-        priority: 'high'
-      })
-    } else {
-      actionabilityScore += 10
-      completenessScore += 15
-    }
-
-    // Calculate final scores
-    completenessScore = Math.min(100, completenessScore)
-    actionabilityScore = Math.min(100, actionabilityScore)
-    clarityScore = Math.min(100, clarityScore + 40) // Base clarity bonus
-    marketReadinessScore = Math.min(100, marketReadinessScore + 30) // Base market bonus
+    // Generate suggestions
+    const suggestions = this.generateSuggestions(deliverable, {
+      completenessScore,
+      clarityScore,
+      actionabilityScore,
+      marketReadinessScore
+    })
 
     return {
       completenessScore,
-      actionabilityScore,
       clarityScore,
+      actionabilityScore,
       marketReadinessScore,
-      suggestions: suggestions.sort((a, b) => {
-        const priorityOrder = { high: 3, medium: 2, low: 1 }
-        return priorityOrder[b.priority] - priorityOrder[a.priority]
-      })
+      overallScore,
+      suggestions
     }
   }
 
   static generateEnhancementPrompts(deliverable: CompiledDeliverable, analysis: QualityAnalysis): string[] {
     const prompts: string[] = []
 
-    // Generate prompts based on high-priority suggestions
-    const highPrioritySuggestions = analysis.suggestions.filter(s => s.priority === 'high')
+    // Based on low scores, generate specific prompts
+    if (analysis.completenessScore < 70) {
+      prompts.push('Add more detailed technical specifications and implementation details')
+    }
 
-    highPrioritySuggestions.forEach(suggestion => {
-      switch (suggestion.section) {
-        case 'Project Overview':
-          if (suggestion.issue.includes('Problem statement')) {
-            prompts.push(`Analyze the project "${deliverable.projectOverview.name}" and define a specific, measurable problem statement. Consider: What pain point does this solve? Who experiences this problem? How significant is the impact?`)
-          }
-          if (suggestion.issue.includes('Solution summary')) {
-            prompts.push(`Create a clear, concrete solution summary for "${deliverable.projectOverview.name}". Explain exactly how the solution works, what technology is used, and what the end user experience looks like.`)
-          }
-          break
+    if (analysis.clarityScore < 70) {
+      prompts.push('Improve clarity of problem statement and solution description')
+    }
 
-        case 'Technical Specification':
-          if (suggestion.issue.includes('No technical components')) {
-            prompts.push(`Break down "${deliverable.projectOverview.name}" into specific technical components. Identify the core features, modules, services, and interfaces needed to build this solution.`)
-          }
-          if (suggestion.issue.includes('high-priority components')) {
-            prompts.push(`Prioritize the technical components for "${deliverable.projectOverview.name}". Which components are essential for an MVP? Which are nice-to-have features?`)
-          }
-          break
+    if (analysis.actionabilityScore < 70) {
+      prompts.push('Provide more specific and actionable implementation steps')
+    }
 
-        case 'Implementation Plan':
-          if (suggestion.issue.includes('No implementation phases')) {
-            prompts.push(`Create a phased implementation plan for "${deliverable.projectOverview.name}". Define 3-4 phases from initial development to market launch, with realistic timelines and dependencies.`)
-          }
-          break
+    if (analysis.marketReadinessScore < 70) {
+      prompts.push('Enhance market analysis and business case validation')
+    }
 
-        case 'Next Steps':
-          if (suggestion.issue.includes('immediate action items')) {
-            prompts.push(`Define immediate next steps for "${deliverable.projectOverview.name}". What are 5 concrete actions that can be taken in the next 30 days to move this project forward?`)
-          }
-          break
-      }
-    })
+    // Component-specific prompts
+    if (deliverable.technicalSpecification.components.length < 3) {
+      prompts.push('Define more technical components and their relationships')
+    }
 
-    return prompts
+    if (deliverable.implementationPlan.phases.length < 2) {
+      prompts.push('Create a more detailed phased implementation plan')
+    }
+
+    if (deliverable.validationResults.recommendations.length < 3) {
+      prompts.push('Provide more actionable recommendations based on analysis')
+    }
+
+    return prompts.slice(0, 5) // Limit to top 5 prompts
   }
 
-  static suggestMissingInformation(deliverable: CompiledDeliverable): string[] {
-    const missing: string[] = []
+  private static calculateCompletenessScore(deliverable: CompiledDeliverable): number {
+    let score = 0
+    let maxScore = 0
 
-    // Check for missing technical details
-    if (deliverable.technicalSpecification.architecture.includes('to be determined')) {
-      missing.push('System architecture and technology stack decisions')
+    // Project overview completeness (20 points)
+    maxScore += 20
+    if (deliverable.projectOverview.description.length > 50) score += 5
+    if (deliverable.projectOverview.problemStatement.length > 50) score += 5
+    if (deliverable.projectOverview.solutionSummary.length > 50) score += 5
+    if (deliverable.projectOverview.targetAudience.length > 0) score += 5
+
+    // Technical specification completeness (25 points)
+    maxScore += 25
+    if (deliverable.technicalSpecification.components.length >= 3) score += 8
+    if (deliverable.technicalSpecification.components.length >= 5) score += 3
+    if (deliverable.technicalSpecification.architecture.length > 30) score += 7
+    if (deliverable.technicalSpecification.technicalRequirements.length >= 3) score += 7
+
+    // Market analysis completeness (20 points)
+    maxScore += 20
+    if (deliverable.marketAnalysis.opportunities.length >= 2) score += 7
+    if (deliverable.marketAnalysis.findings.length >= 3) score += 6
+    if (deliverable.marketAnalysis.competitiveAdvantages.length >= 2) score += 7
+
+    // Implementation plan completeness (20 points)
+    maxScore += 20
+    if (deliverable.implementationPlan.phases.length >= 2) score += 7
+    if (deliverable.implementationPlan.milestones.length >= 3) score += 6
+    if (deliverable.implementationPlan.resources.length >= 3) score += 7
+
+    // Validation and next steps (15 points)
+    maxScore += 15
+    if (deliverable.validationResults.recommendations.length >= 3) score += 8
+    if (deliverable.nextSteps.immediate.length >= 3) score += 7
+
+    return Math.round((score / maxScore) * 100)
+  }
+
+  private static calculateClarityScore(deliverable: CompiledDeliverable): number {
+    let score = 75 // Base score
+
+    // Check for clear problem statement
+    if (deliverable.projectOverview.problemStatement.length > 100) score += 5
+    if (deliverable.projectOverview.problemStatement.includes('problem') || 
+        deliverable.projectOverview.problemStatement.includes('challenge')) score += 5
+
+    // Check for clear solution description
+    if (deliverable.projectOverview.solutionSummary.length > 100) score += 5
+
+    // Check for well-defined components
+    const hasWellDefinedComponents = deliverable.technicalSpecification.components
+      .filter(c => c.description.length > 30).length >= 3
+    if (hasWellDefinedComponents) score += 10
+
+    return Math.min(100, score)
+  }
+
+  private static calculateActionabilityScore(deliverable: CompiledDeliverable): number {
+    let score = 60 // Base score
+
+    // Implementation phases with specific deliverables
+    const phasesWithDeliverables = deliverable.implementationPlan.phases
+      .filter(p => p.deliverables.length >= 2).length
+    score += phasesWithDeliverables * 8
+
+    // Specific next steps
+    if (deliverable.nextSteps.immediate.length >= 3) score += 10
+    if (deliverable.nextSteps.shortTerm.length >= 3) score += 10
+
+    // Actionable recommendations
+    const actionableRecommendations = deliverable.validationResults.recommendations
+      .filter(r => r.includes('should') || r.includes('need') || r.includes('implement')).length
+    score += actionableRecommendations * 3
+
+    return Math.min(100, score)
+  }
+
+  private static calculateMarketReadinessScore(deliverable: CompiledDeliverable): number {
+    let score = 50 // Base score
+
+    // Market analysis depth
+    if (deliverable.marketAnalysis.opportunities.length >= 3) score += 15
+    if (deliverable.marketAnalysis.findings.length >= 3) score += 10
+    if (deliverable.marketAnalysis.competitiveAdvantages.length >= 2) score += 10
+
+    // Target audience definition
+    if (deliverable.projectOverview.targetAudience.length >= 2) score += 10
+
+    // Risk assessment
+    if (deliverable.validationResults.riskAssessment.length >= 3) score += 15
+
+    return Math.min(100, score)
+  }
+
+  private static generateSuggestions(deliverable: CompiledDeliverable, scores: any): EnhancementSuggestion[] {
+    const suggestions: EnhancementSuggestion[] = []
+
+    // Completeness suggestions
+    if (scores.completenessScore < 70) {
+      if (deliverable.technicalSpecification.components.length < 3) {
+        suggestions.push({
+          section: 'Technical Specification',
+          suggestion: 'Add more detailed technical components with clear descriptions and dependencies',
+          priority: 'high',
+          impact: 'Improves project clarity and implementation guidance'
+        })
+      }
+
+      if (deliverable.implementationPlan.phases.length < 2) {
+        suggestions.push({
+          section: 'Implementation Plan',
+          suggestion: 'Create a detailed phased approach with specific deliverables and timelines',
+          priority: 'high',
+          impact: 'Provides clear roadmap for project execution'
+        })
+      }
     }
 
-    if (deliverable.technicalSpecification.technicalRequirements.length === 0) {
-      missing.push('Specific technical requirements and constraints')
+    // Clarity suggestions
+    if (scores.clarityScore < 70) {
+      if (deliverable.projectOverview.problemStatement.length < 100) {
+        suggestions.push({
+          section: 'Problem Statement',
+          suggestion: 'Expand the problem statement to clearly articulate the specific challenges being addressed',
+          priority: 'medium',
+          impact: 'Better stakeholder understanding and alignment'
+        })
+      }
     }
 
-    // Check for missing market information
-    if (deliverable.marketAnalysis.findings.length === 0) {
-      missing.push('Market research findings and user validation')
+    // Actionability suggestions
+    if (scores.actionabilityScore < 70) {
+      suggestions.push({
+        section: 'Next Steps',
+        suggestion: 'Define specific, time-bound actions with clear owners and success criteria',
+        priority: 'high',
+        impact: 'Enables immediate project progression'
+      })
     }
 
-    if (deliverable.projectOverview.targetAudience.some(audience => audience.includes('to be defined'))) {
-      missing.push('Clear target audience definition and user personas')
+    // Market readiness suggestions
+    if (scores.marketReadinessScore < 70) {
+      if (deliverable.marketAnalysis.opportunities.length < 2) {
+        suggestions.push({
+          section: 'Market Analysis',
+          suggestion: 'Conduct deeper market research to identify specific opportunities and validate demand',
+          priority: 'medium',
+          impact: 'Strengthens business case and reduces market risk'
+        })
+      }
     }
 
-    // Check for missing business information
-    if (deliverable.implementationPlan.resources.length === 0) {
-      missing.push('Resource requirements (team, budget, tools)')
-    }
-
-    if (deliverable.validationResults.riskAssessment.length === 0) {
-      missing.push('Risk assessment and mitigation strategies')
-    }
-
-    return missing
+    return suggestions.sort((a, b) => {
+      const priorityOrder = { high: 3, medium: 2, low: 1 }
+      return priorityOrder[b.priority] - priorityOrder[a.priority]
+    })
   }
 }
