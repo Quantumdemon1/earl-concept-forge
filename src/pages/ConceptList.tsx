@@ -1,7 +1,7 @@
 
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
@@ -17,13 +17,24 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import CreateConceptDialog from '@/components/concepts/CreateConceptDialog'
+import StartAnalysisDialog from '@/components/analysis/StartAnalysisDialog'
 import { Plus, Search, Filter } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 
 export default function ConceptList() {
   const [searchTerm, setSearchTerm] = useState('')
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [analysisDialog, setAnalysisDialog] = useState<{
+    open: boolean
+    conceptId: string
+    conceptName: string
+  }>({
+    open: false,
+    conceptId: '',
+    conceptName: ''
+  })
   const { user } = useAuth()
+  const navigate = useNavigate()
   
   const { data: concepts, isLoading, error } = useQuery({
     queryKey: ['concepts', searchTerm],
@@ -45,6 +56,15 @@ export default function ConceptList() {
       return data
     },
   })
+
+  const handleStartAnalysis = (conceptId: string, conceptName: string) => {
+    console.log('Starting analysis for concept:', conceptId, conceptName)
+    setAnalysisDialog({
+      open: true,
+      conceptId,
+      conceptName
+    })
+  }
   
   if (error) {
     return (
@@ -142,8 +162,12 @@ export default function ConceptList() {
                 <Button asChild variant="outline" size="sm" className="flex-1">
                   <Link to={`/concepts/${concept.id}`}>View</Link>
                 </Button>
-                <Button asChild size="sm" className="flex-1">
-                  <Link to={`/concepts/${concept.id}/analysis`}>Analyze</Link>
+                <Button 
+                  size="sm" 
+                  className="flex-1"
+                  onClick={() => handleStartAnalysis(concept.id, concept.name)}
+                >
+                  Analyze
                 </Button>
               </CardFooter>
             </Card>
@@ -169,6 +193,13 @@ export default function ConceptList() {
       <CreateConceptDialog
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
+      />
+
+      <StartAnalysisDialog
+        conceptId={analysisDialog.conceptId}
+        conceptName={analysisDialog.conceptName}
+        open={analysisDialog.open}
+        onOpenChange={(open) => setAnalysisDialog(prev => ({ ...prev, open }))}
       />
     </div>
   )

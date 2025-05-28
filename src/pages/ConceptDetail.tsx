@@ -9,6 +9,7 @@ import ConceptOverviewTab from '@/components/concept/ConceptOverviewTab'
 import ConceptAnalysisTab from '@/components/concept/ConceptAnalysisTab'
 import DevelopmentPanel from '@/components/development/DevelopmentPanel'
 import ExportPanel from '@/components/export/ExportPanel'
+import StartAnalysisDialog from '@/components/analysis/StartAnalysisDialog'
 
 export default function ConceptDetail() {
   const { id: conceptId } = useParams()
@@ -16,6 +17,7 @@ export default function ConceptDetail() {
   const [concept, setConcept] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [exportData, setExportData] = useState<any>(null)
+  const [showAnalysisDialog, setShowAnalysisDialog] = useState(false)
 
   useEffect(() => {
     if (!conceptId) {
@@ -48,6 +50,11 @@ export default function ConceptDetail() {
     fetchConcept()
   }, [conceptId, toast])
 
+  const handleStartAnalysis = () => {
+    console.log('Opening analysis dialog for concept:', conceptId)
+    setShowAnalysisDialog(true)
+  }
+
   if (isLoading) {
     return <div>Loading concept details...</div>
   }
@@ -60,7 +67,7 @@ export default function ConceptDetail() {
     <div className="space-y-6">
       <ConceptHeader 
         concept={concept}
-        onStartAnalysis={() => {}}
+        onStartAnalysis={handleStartAnalysis}
         onOpenDevelopment={() => {}}
       />
       
@@ -98,6 +105,13 @@ export default function ConceptDetail() {
           />
         </TabsContent>
       </Tabs>
+
+      <StartAnalysisDialog
+        conceptId={concept.id}
+        conceptName={concept.name}
+        open={showAnalysisDialog}
+        onOpenChange={setShowAnalysisDialog}
+      />
     </div>
   )
 }
