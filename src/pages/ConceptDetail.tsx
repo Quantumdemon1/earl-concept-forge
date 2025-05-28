@@ -1,12 +1,13 @@
+
 import React, { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
 import { projectService } from '@/services/projectService'
-import { ConceptHeader } from '@/components/ConceptHeader'
-import { ConceptOverviewTab } from '@/components/ConceptOverviewTab'
-import { ConceptAnalysisTab } from '@/components/ConceptAnalysisTab'
-import { DevelopmentPanel } from '@/components/development/DevelopmentPanel'
+import ConceptHeader from '@/components/concept/ConceptHeader'
+import ConceptOverviewTab from '@/components/concept/ConceptOverviewTab'
+import ConceptAnalysisTab from '@/components/concept/ConceptAnalysisTab'
+import DevelopmentPanel from '@/components/development/DevelopmentPanel'
 import ExportPanel from '@/components/export/ExportPanel'
 
 export default function ConceptDetail() {
@@ -57,7 +58,11 @@ export default function ConceptDetail() {
 
   return (
     <div className="space-y-6">
-      <ConceptHeader concept={concept} />
+      <ConceptHeader 
+        concept={concept}
+        onStartAnalysis={() => {}}
+        onOpenDevelopment={() => {}}
+      />
       
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList>
@@ -72,11 +77,17 @@ export default function ConceptDetail() {
         </TabsContent>
 
         <TabsContent value="analysis">
-          <ConceptAnalysisTab conceptId={concept.id} />
+          <ConceptAnalysisTab 
+            conceptId={concept.id} 
+            analyses={exportData?.analyses}
+          />
         </TabsContent>
 
         <TabsContent value="development">
-          <DevelopmentPanel conceptId={concept.id} />
+          <DevelopmentPanel 
+            conceptId={concept.id}
+            conceptName={concept.name}
+          />
         </TabsContent>
 
         <TabsContent value="export">

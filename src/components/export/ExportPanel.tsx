@@ -31,8 +31,11 @@ export default function ExportPanel({ conceptId, conceptName, conceptData }: Exp
   const [selectedFormat, setSelectedFormat] = useState('docx')
   const [selectedTemplate, setSelectedTemplate] = useState('default')
   const [exportOptions, setExportOptions] = useState({
-    includeCoverPage: true,
-    includeTableOfContents: true,
+    overview: true,
+    earlAnalysis: true,
+    developmentHistory: false,
+    implementationPlan: true,
+    visualizations: false,
   })
   const [isLoading, setIsLoading] = useState(true)
   const [isRecompiling, setIsRecompiling] = useState(false)
@@ -108,6 +111,21 @@ export default function ExportPanel({ conceptId, conceptName, conceptData }: Exp
     } finally {
       setIsRecompiling(false)
     }
+  }
+
+  const handleFormatChange = (format: string) => {
+    setSelectedFormat(format)
+  }
+
+  const handleTemplateChange = (template: string) => {
+    setSelectedTemplate(template)
+  }
+
+  const handleOptionsChange = (key: string, value: boolean) => {
+    setExportOptions(prev => ({
+      ...prev,
+      [key]: value
+    }))
   }
 
   useEffect(() => {
@@ -196,13 +214,14 @@ export default function ExportPanel({ conceptId, conceptName, conceptData }: Exp
             </CardHeader>
             <CardContent className="space-y-4">
               <ExportFormatSelector
-                onFormatSelect={setSelectedFormat}
+                onFormatChange={handleFormatChange}
               />
               <DeliverableTemplateSelector
-                onTemplateSelect={setSelectedTemplate}
+                onTemplateChange={handleTemplateChange}
               />
               <ExportOptionsSelector
-                onOptionsChange={setExportOptions}
+                options={exportOptions}
+                onChange={handleOptionsChange}
               />
               <div className="flex justify-end">
                 <Button
