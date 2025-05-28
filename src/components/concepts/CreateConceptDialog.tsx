@@ -1,6 +1,7 @@
 
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { useNavigate } from 'react-router-dom'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -39,6 +40,7 @@ export default function CreateConceptDialog({
   open,
   onOpenChange,
 }: CreateConceptDialogProps) {
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { toast } = useToast()
   const { user } = useAuth()
@@ -80,7 +82,7 @@ export default function CreateConceptDialog({
       console.log('Concept created successfully:', concept)
       return concept
     },
-    onSuccess: () => {
+    onSuccess: (concept) => {
       queryClient.invalidateQueries({ queryKey: ['concepts'] })
       toast({
         title: 'Concept created',
@@ -88,6 +90,8 @@ export default function CreateConceptDialog({
       })
       reset()
       onOpenChange(false)
+      // Navigate to the newly created concept
+      navigate(`/concepts/${concept.id}`)
     },
     onError: (error) => {
       console.error('Create concept mutation error:', error)

@@ -12,6 +12,7 @@ import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Concepts from "./pages/Concepts";
 import ConceptList from "./pages/ConceptList";
+import CreateConcept from "./pages/CreateConcept";
 import ConceptDetail from "./pages/ConceptDetail";
 import AnalysisView from "./pages/AnalysisView";
 import Login from "./pages/Login";
@@ -74,6 +75,14 @@ const App = () => (
                   element={
                     <ProtectedLayout>
                       <ConceptList />
+                    </ProtectedLayout>
+                  }
+                />
+                <Route
+                  path="/concepts/new"
+                  element={
+                    <ProtectedLayout>
+                      <CreateConcept />
                     </ProtectedLayout>
                   }
                 />
