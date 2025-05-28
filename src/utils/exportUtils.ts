@@ -1,3 +1,5 @@
+import { DeliverableCompilerService } from '@/services/deliverableCompiler'
+import { DeliverableTemplateService } from '@/services/deliverableTemplates'
 
 export const downloadBlob = (blob: Blob, filename: string) => {
   const url = URL.createObjectURL(blob)
@@ -20,6 +22,78 @@ export const exportJSON = (data: any, filename: string) => {
 export const exportMarkdown = (data: any, filename: string) => {
   let markdown = `# ${data.concept.name}\n\n`
   markdown += `${data.concept.description}\n\n`
+  
+  // Add compiled deliverable if available
+  if (data.compiledDeliverable) {
+    markdown += `## 📋 Project Deliverable\n\n`
+    markdown += `### Executive Summary\n`
+    markdown += `**Problem**: ${data.compiledDeliverable.projectOverview.problemStatement}\n\n`
+    markdown += `**Solution**: ${data.compiledDeliverable.projectOverview.solutionSummary}\n\n`
+    markdown += `**Target Audience**: ${data.compiledDeliverable.projectOverview.targetAudience.join(', ')}\n\n`
+    
+    markdown += `### 🎯 Key Components\n`
+    data.compiledDeliverable.technicalSpecification.components.forEach((comp: any, index: number) => {
+      markdown += `${index + 1}. **${comp.name}** (${comp.priority} priority)\n`
+      markdown += `   - ${comp.description}\n`
+      if (comp.technicalRequirements.length > 0) {
+        markdown += `   - Requirements: ${comp.technicalRequirements.join(', ')}\n`
+      }
+      markdown += `\n`
+    })
+    
+    markdown += `### 📊 Market Analysis\n`
+    if (data.compiledDeliverable.marketAnalysis.opportunities.length > 0) {
+      markdown += `**Opportunities**:\n`
+      data.compiledDeliverable.marketAnalysis.opportunities.forEach((opp: string) => {
+        markdown += `- ${opp}\n`
+      })
+      markdown += `\n`
+    }
+    
+    if (data.compiledDeliverable.marketAnalysis.competitiveAdvantages.length > 0) {
+      markdown += `**Competitive Advantages**:\n`
+      data.compiledDeliverable.marketAnalysis.competitiveAdvantages.forEach((adv: string) => {
+        markdown += `- ${adv}\n`
+      })
+      markdown += `\n`
+    }
+    
+    markdown += `### 🚀 Implementation Plan\n`
+    data.compiledDeliverable.implementationPlan.phases.forEach((phase: any, index: number) => {
+      markdown += `#### Phase ${index + 1}: ${phase.name}\n`
+      markdown += `**Duration**: ${phase.duration}\n\n`
+      markdown += `**Deliverables**:\n`
+      phase.deliverables.forEach((deliverable: string) => {
+        markdown += `- ${deliverable}\n`
+      })
+      markdown += `\n`
+    })
+    
+    markdown += `### ✅ Validation Results\n`
+    if (data.compiledDeliverable.validationResults.recommendations.length > 0) {
+      markdown += `**Key Recommendations**:\n`
+      data.compiledDeliverable.validationResults.recommendations.forEach((rec: string) => {
+        markdown += `- ${rec}\n`
+      })
+      markdown += `\n`
+    }
+    
+    markdown += `### 📈 Quality Metrics\n`
+    const metrics = data.compiledDeliverable.qualityMetrics
+    markdown += `- **Completeness**: ${metrics.completeness}%\n`
+    markdown += `- **Feasibility**: ${metrics.feasibility}%\n`
+    markdown += `- **Market Viability**: ${metrics.marketViability}%\n`
+    markdown += `- **Technical Readiness**: ${metrics.technicalReadiness}%\n\n`
+    
+    markdown += `### 🎯 Next Steps\n`
+    markdown += `**Immediate Actions**:\n`
+    data.compiledDeliverable.nextSteps.immediate.forEach((step: string, i: number) => {
+      markdown += `${i + 1}. ${step}\n`
+    })
+    markdown += `\n`
+    
+    markdown += `---\n\n`
+  }
   
   if (data.overview) {
     markdown += `## Overview\n\n`
@@ -218,6 +292,20 @@ export const exportPDF = async (data: any, filename: string, toast: any) => {
   })
 }
 
+export const exportDeliverableTemplate = (compiledDeliverable: any, templateName: string, conceptName: string) => {
+  const templates = DeliverableTemplateService.getAvailableTemplates()
+  const template = templates.find(t => t.name === templateName)
+  
+  if (!template) {
+    throw new Error(`Template "${templateName}" not found`)
+  }
+  
+  const content = template.generate(compiledDeliverable)
+  const blob = new Blob([content], { type: 'text/markdown' })
+  const filename = `${conceptName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${templateName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`
+  downloadBlob(blob, filename)
+}
+
 export const compileExportData = (concept: any, exportData: any, includeOptions: any) => {
   const compiledData: any = {
     concept: {
@@ -231,6 +319,21 @@ export const compileExportData = (concept: any, exportData: any, includeOptions:
     },
     exported_at: new Date().toISOString(),
     export_options: includeOptions,
+  }
+  
+  // Compile the deliverable from development data
+  if (exportData?.development && exportData.development.length > 0) {
+    console.log('Compiling deliverable from development data...')
+    try {
+      compiledData.compiledDeliverable = DeliverableCompilerService.compileFromDevelopmentData(
+        concept, 
+        exportData
+      )
+      console.log('Deliverable compiled successfully:', compiledData.compiledDeliverable)
+    } catch (error) {
+      console.error('Error compiling deliverable:', error)
+      // Continue with export even if compilation fails
+    }
   }
   
   if (includeOptions.overview) {

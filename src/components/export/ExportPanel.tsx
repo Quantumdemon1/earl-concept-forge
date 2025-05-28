@@ -1,4 +1,3 @@
-
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
@@ -7,7 +6,8 @@ import { useToast } from '@/hooks/use-toast'
 import ExportFormatSelector from './ExportFormatSelector'
 import ExportOptionsSelector from './ExportOptionsSelector'
 import ExportButton from './ExportButton'
-import { exportJSON, exportMarkdown, exportPDF, compileExportData } from '@/utils/exportUtils'
+import DeliverableTemplateSelector from './DeliverableTemplateSelector'
+import { exportJSON, exportMarkdown, exportPDF, exportDeliverableTemplate, compileExportData } from '@/utils/exportUtils'
 
 interface ExportPanelProps {
   concept: any
@@ -15,7 +15,8 @@ interface ExportPanelProps {
 
 export default function ExportPanel({ concept }: ExportPanelProps) {
   const { toast } = useToast()
-  const [exportFormat, setExportFormat] = useState('json')
+  const [exportFormat, setExportFormat] = useState('deliverable')
+  const [selectedTemplate, setSelectedTemplate] = useState('Executive Summary')
   const [isExporting, setIsExporting] = useState(false)
   const [includeOptions, setIncludeOptions] = useState({
     overview: true,
@@ -79,18 +80,34 @@ export default function ExportPanel({ concept }: ExportPanelProps) {
       const compiledData = compileExportData(concept, exportData, includeOptions)
       
       // Export based on format
-      if (exportFormat === 'json') {
+      if (exportFormat === 'deliverable' && compiledData.compiledDeliverable) {
+        exportDeliverableTemplate(compiledData.compiledDeliverable, selectedTemplate, concept.name)
+        toast({
+          title: 'Deliverable Exported',
+          description: `${concept.name} deliverable has been exported as ${selectedTemplate} template.`,
+        })
+      } else if (exportFormat === 'json') {
         exportJSON(compiledData, concept.name)
+        toast({
+          title: 'Export Successful',
+          description: `${concept.name} has been exported as JSON with complete development data.`,
+        })
       } else if (exportFormat === 'markdown') {
         exportMarkdown(compiledData, concept.name)
+        toast({
+          title: 'Export Successful',
+          description: `${concept.name} has been exported as Markdown with structured deliverable.`,
+        })
       } else if (exportFormat === 'pdf') {
         await exportPDF(compiledData, concept.name, toast)
+      } else {
+        // Fallback to markdown if no deliverable compiled
+        exportMarkdown(compiledData, concept.name)
+        toast({
+          title: 'Export Complete',
+          description: `${concept.name} exported as Markdown. Complete AI development for deliverable templates.`,
+        })
       }
-      
-      toast({
-        title: 'Export Successful',
-        description: `${concept.name} has been exported as ${exportFormat.toUpperCase()} with complete development data including LLM interactions, prompts, and responses.`,
-      })
     } catch (error) {
       console.error('Export error:', error)
       toast({
@@ -118,24 +135,34 @@ export default function ExportPanel({ concept }: ExportPanelProps) {
     )
   }
   
+  const hasCompletedDevelopment = exportData?.development && exportData.development.length > 0
+  
   return (
     <div className="space-y-6">
       <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <h3 className="font-medium text-blue-900 mb-2">Export Includes:</h3>
+        <h3 className="font-medium text-blue-900 mb-2">Enhanced Export Features:</h3>
         <ul className="text-sm text-blue-800 space-y-1">
-          <li>• Complete LLM interactions and responses</li>
-          <li>• Detailed prompts used in each iteration</li>
-          <li>• Extracted components, research, and validations</li>
-          <li>• Quality scores and progression metrics</li>
-          <li>• Development session configurations</li>
-          <li>• EARL analysis results and outputs</li>
+          <li>• <strong>Smart Deliverables</strong>: Compiled project specifications from AI development</li>
+          <li>• <strong>Multiple Templates</strong>: Executive summaries, technical specs, business plans</li>
+          <li>• <strong>Quality Metrics</strong>: Automated assessment of project readiness</li>
+          <li>• <strong>Implementation Roadmaps</strong>: Step-by-step development plans</li>
+          <li>• Complete LLM interactions and development history</li>
+          <li>• EARL analysis results and validation data</li>
         </ul>
       </div>
       
       <ExportFormatSelector 
         value={exportFormat} 
         onChange={setExportFormat} 
+        hasCompletedDevelopment={hasCompletedDevelopment}
       />
+      
+      {exportFormat === 'deliverable' && hasCompletedDevelopment && (
+        <DeliverableTemplateSelector 
+          value={selectedTemplate}
+          onChange={setSelectedTemplate}
+        />
+      )}
       
       <ExportOptionsSelector 
         options={includeOptions}
