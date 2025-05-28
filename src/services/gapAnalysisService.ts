@@ -1,7 +1,9 @@
-
 import type { CompiledDeliverable } from './deliverableCompiler'
 import type { EnhancementSuggestion, QualityAnalysis } from './deliverableEnhancer'
 import { DeliverableEnhancerService } from './deliverableEnhancer'
+
+// Export the QualityAnalysis type so it can be imported by other files
+export type { QualityAnalysis } from './deliverableEnhancer'
 
 export interface GapAnalysisResult {
   missingComponents: string[]
