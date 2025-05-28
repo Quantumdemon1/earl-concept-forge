@@ -1,12 +1,7 @@
+
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { CheckCircle, Circle, Download, RefreshCw, Brain, Zap } from 'lucide-react'
-import DeliverableQualityDashboard from './DeliverableQualityDashboard'
-import EnhancementSuggestions from './EnhancementSuggestions'
-import SmartQuestionPanel from './SmartQuestionPanel'
+import WorkflowProgressCard from './WorkflowProgressCard'
+import WorkflowTabsContent from './WorkflowTabsContent'
 import { useAutoEnhancement } from '@/hooks/useAutoEnhancement'
 import { SmartQuestionService } from '@/services/smartQuestionService'
 import type { CompiledDeliverable } from '@/services/deliverableCompiler'
@@ -18,7 +13,7 @@ interface ExportWorkflowProps {
   gapAnalysis: GapAnalysisResult
   enhancementQuestions: EnhancementQuestion[]
   conceptName: string
-  conceptId: string // Add conceptId prop
+  conceptId: string
   onRecompile: () => void
   onExport: () => void
   isRecompiling?: boolean
@@ -30,7 +25,7 @@ export default function ExportWorkflow({
   gapAnalysis,
   enhancementQuestions,
   conceptName,
-  conceptId, // Receive conceptId prop
+  conceptId,
   onRecompile,
   onExport,
   isRecompiling = false,
@@ -110,7 +105,7 @@ export default function ExportWorkflow({
 
     try {
       const result = await processQuestion(
-        conceptId, // Use the actual conceptId prop
+        conceptId,
         compiledDeliverable,
         question,
         answer
@@ -140,164 +135,35 @@ export default function ExportWorkflow({
 
   return (
     <div className="space-y-6">
-      {/* Workflow Progress */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Brain className="h-5 w-5" />
-              Smart Export Workflow
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              <Badge variant={overallReadiness >= 75 ? 'default' : 'outline'}>
-                {Math.round(overallReadiness)}% Ready
-              </Badge>
-              {smartQuestions?.nextBestQuestion && (
-                <Button
-                  size="sm"
-                  onClick={handleSmartEnhancement}
-                  className="flex items-center gap-1"
-                  disabled={isProcessing}
-                >
-                  <Zap className="h-3 w-3" />
-                  Smart Enhance
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {workflowSteps.map((step, index) => (
-              <div
-                key={step.id}
-                className={`p-4 rounded-lg border ${
-                  step.completed 
-                    ? 'bg-green-50 border-green-200' 
-                    : 'bg-gray-50 border-gray-200'
-                }`}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  {step.completed ? (
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                  ) : (
-                    <Circle className="h-5 w-5 text-gray-400" />
-                  )}
-                  <span className="font-medium text-sm">{step.label}</span>
-                </div>
-                <p className="text-xs text-gray-600">{step.description}</p>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <WorkflowProgressCard
+        workflowSteps={workflowSteps}
+        overallReadiness={overallReadiness}
+        hasSmartEnhancement={!!smartQuestions?.nextBestQuestion}
+        onSmartEnhancement={handleSmartEnhancement}
+        isProcessing={isProcessing}
+      />
 
-      {/* Main Content Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview">Quality Overview</TabsTrigger>
-          <TabsTrigger value="smart-questions">
-            Smart Questions
-            {smartQuestions?.nextBestQuestion && (
-              <Badge className="ml-1 h-4 w-4 p-0 text-xs">!</Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="enhancement">Manual Enhancements</TabsTrigger>
-          <TabsTrigger value="export">Export Options</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="space-y-4">
-          <DeliverableQualityDashboard
-            qualityAnalysis={gapAnalysis.qualityAnalysis}
-            gapAnalysis={gapAnalysis}
-            conceptName={conceptName}
-          />
-        </TabsContent>
-
-        <TabsContent value="smart-questions" className="space-y-4">
-          <SmartQuestionPanel
-            smartQuestions={smartQuestions}
-            isLoading={isLoadingSmartQuestions}
-            answeredQuestions={answeredQuestions}
-            onAnswerQuestion={handleAnswerQuestion}
-            isProcessingQuestion={smartQuestions?.nextBestQuestion ? isQuestionProcessing(smartQuestions.nextBestQuestion.id) : false}
-            isProcessing={isProcessing}
-          />
-        </TabsContent>
-
-        <TabsContent value="enhancement" className="space-y-4">
-          <EnhancementSuggestions
-            suggestions={gapAnalysis.qualityAnalysis.suggestions}
-            questions={enhancementQuestions}
-            onApplySuggestion={handleApplyEnhancement}
-            onAnswerQuestion={handleAnswerQuestion}
-          />
-          
-          {appliedEnhancements.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Applied Enhancements</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {appliedEnhancements.map((enhancement, index) => (
-                    <Badge key={index} variant="outline">
-                      {enhancement}
-                    </Badge>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="export" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Export Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-3">
-                <Button
-                  onClick={onRecompile}
-                  disabled={isRecompiling}
-                  variant="outline"
-                  className="flex items-center gap-2"
-                >
-                  <RefreshCw className={`h-4 w-4 ${isRecompiling ? 'animate-spin' : ''}`} />
-                  Recompile Deliverable
-                </Button>
-                
-                <Button
-                  onClick={onExport}
-                  disabled={isExporting || overallReadiness < 50}
-                  className="flex items-center gap-2"
-                >
-                  <Download className="h-4 w-4" />
-                  Export Deliverable
-                </Button>
-              </div>
-              
-              {overallReadiness < 50 && (
-                <p className="text-sm text-amber-600">
-                  Complete more workflow steps to enable export
-                </p>
-              )}
-
-              {smartQuestions && (
-                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-blue-800">
-                    <strong>Completion Strategy:</strong> {smartQuestions.completionStrategy}
-                  </p>
-                  <p className="text-xs text-blue-600 mt-1">
-                    Estimated time: {smartQuestions.estimatedTimeToComplete} minutes
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      <WorkflowTabsContent
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        compiledDeliverable={compiledDeliverable}
+        gapAnalysis={gapAnalysis}
+        enhancementQuestions={enhancementQuestions}
+        conceptName={conceptName}
+        smartQuestions={smartQuestions}
+        isLoadingSmartQuestions={isLoadingSmartQuestions}
+        answeredQuestions={answeredQuestions}
+        appliedEnhancements={appliedEnhancements}
+        onAnswerQuestion={handleAnswerQuestion}
+        onApplyEnhancement={handleApplyEnhancement}
+        isQuestionProcessing={isQuestionProcessing}
+        isProcessing={isProcessing}
+        onRecompile={onRecompile}
+        onExport={onExport}
+        isRecompiling={isRecompiling}
+        isExporting={isExporting}
+        overallReadiness={overallReadiness}
+      />
     </div>
   )
 }
