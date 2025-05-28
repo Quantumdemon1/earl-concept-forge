@@ -1,12 +1,15 @@
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { CheckCircle, Circle, Download, RefreshCw } from 'lucide-react'
+import { CheckCircle, Circle, Download, RefreshCw, Brain, Zap } from 'lucide-react'
 import DeliverableQualityDashboard from './DeliverableQualityDashboard'
 import EnhancementSuggestions from './EnhancementSuggestions'
+import SmartQuestionPanel from './SmartQuestionPanel'
+import { useAutoEnhancement } from '@/hooks/useAutoEnhancement'
+import { SmartQuestionService } from '@/services/smartQuestionService'
 import type { CompiledDeliverable } from '@/services/deliverableCompiler'
 import type { GapAnalysisResult } from '@/services/gapAnalysisService'
 import type { EnhancementQuestion } from '@/services/gapAnalysisService'
@@ -34,6 +37,36 @@ export default function ExportWorkflow({
 }: ExportWorkflowProps) {
   const [activeTab, setActiveTab] = useState('overview')
   const [appliedEnhancements, setAppliedEnhancements] = useState<string[]>([])
+  const [answeredQuestions, setAnsweredQuestions] = useState<Array<{
+    questionId: string
+    answer: string
+    category: string
+  }>>([])
+  const [smartQuestions, setSmartQuestions] = useState<any>(null)
+  const [isLoadingSmartQuestions, setIsLoadingSmartQuestions] = useState(false)
+
+  const { processQuestion, processBatchQuestions, isProcessing, isQuestionProcessing } = useAutoEnhancement()
+
+  // Load smart questions on component mount
+  useEffect(() => {
+    loadSmartQuestions()
+  }, [compiledDeliverable, gapAnalysis, answeredQuestions])
+
+  const loadSmartQuestions = async () => {
+    setIsLoadingSmartQuestions(true)
+    try {
+      const result = await SmartQuestionService.prioritizeQuestions(
+        compiledDeliverable,
+        gapAnalysis.qualityAnalysis,
+        answeredQuestions
+      )
+      setSmartQuestions(result)
+    } catch (error) {
+      console.error('Failed to load smart questions:', error)
+    } finally {
+      setIsLoadingSmartQuestions(false)
+    }
+  }
 
   const workflowSteps = [
     {
@@ -50,14 +83,14 @@ export default function ExportWorkflow({
     },
     {
       id: 'enhancement',
-      label: 'Enhancement',
-      completed: appliedEnhancements.length > 0,
-      description: 'Improvements applied based on suggestions'
+      label: 'AI Enhancement',
+      completed: appliedEnhancements.length > 0 || answeredQuestions.length > 2,
+      description: 'AI-powered improvements applied based on smart questions'
     },
     {
       id: 'export',
       label: 'Export Ready',
-      completed: gapAnalysis.qualityAnalysis.completenessScore > 75,
+      completed: gapAnalysis.qualityAnalysis.completenessScore > 75 && answeredQuestions.length > 1,
       description: 'Deliverable ready for professional export'
     }
   ]
@@ -68,9 +101,40 @@ export default function ExportWorkflow({
     setAppliedEnhancements(prev => [...prev, enhancement.section])
   }
 
-  const handleAnswerQuestion = (questionId: string, answer: string) => {
-    console.log('Question answered:', questionId, answer)
-    // In a real implementation, this would trigger AI development to improve the deliverable
+  const handleAnswerQuestion = async (questionId: string, answer: string) => {
+    const question = [...enhancementQuestions, ...(smartQuestions?.prioritizedQuestions || [])]
+      .find(q => q.id === questionId)
+    
+    if (!question) return
+
+    try {
+      const result = await processQuestion(
+        'concept-id', // This should come from props
+        compiledDeliverable,
+        question,
+        answer
+      )
+
+      if (result) {
+        setAnsweredQuestions(prev => [...prev, {
+          questionId,
+          answer,
+          category: question.category
+        }])
+
+        // Trigger recompilation to get updated deliverable
+        onRecompile()
+      }
+    } catch (error) {
+      console.error('Failed to process question:', error)
+    }
+  }
+
+  const handleSmartEnhancement = async () => {
+    if (!smartQuestions?.nextBestQuestion) return
+
+    const nextQuestion = smartQuestions.nextBestQuestion
+    setActiveTab('smart-questions')
   }
 
   return (
@@ -79,10 +143,26 @@ export default function ExportWorkflow({
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Export Workflow Progress</CardTitle>
-            <Badge variant={overallReadiness >= 75 ? 'default' : 'outline'}>
-              {Math.round(overallReadiness)}% Ready
-            </Badge>
+            <CardTitle className="flex items-center gap-2">
+              <Brain className="h-5 w-5" />
+              Smart Export Workflow
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <Badge variant={overallReadiness >= 75 ? 'default' : 'outline'}>
+                {Math.round(overallReadiness)}% Ready
+              </Badge>
+              {smartQuestions?.nextBestQuestion && (
+                <Button
+                  size="sm"
+                  onClick={handleSmartEnhancement}
+                  className="flex items-center gap-1"
+                  disabled={isProcessing}
+                >
+                  <Zap className="h-3 w-3" />
+                  Smart Enhance
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -113,9 +193,15 @@ export default function ExportWorkflow({
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">Quality Overview</TabsTrigger>
-          <TabsTrigger value="enhancement">Enhancements</TabsTrigger>
+          <TabsTrigger value="smart-questions">
+            Smart Questions
+            {smartQuestions?.nextBestQuestion && (
+              <Badge className="ml-1 h-4 w-4 p-0 text-xs">!</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="enhancement">Manual Enhancements</TabsTrigger>
           <TabsTrigger value="export">Export Options</TabsTrigger>
         </TabsList>
 
@@ -124,6 +210,17 @@ export default function ExportWorkflow({
             qualityAnalysis={gapAnalysis.qualityAnalysis}
             gapAnalysis={gapAnalysis}
             conceptName={conceptName}
+          />
+        </TabsContent>
+
+        <TabsContent value="smart-questions" className="space-y-4">
+          <SmartQuestionPanel
+            smartQuestions={smartQuestions}
+            isLoading={isLoadingSmartQuestions}
+            answeredQuestions={answeredQuestions}
+            onAnswerQuestion={handleAnswerQuestion}
+            isProcessingQuestion={isQuestionProcessing}
+            isProcessing={isProcessing}
           />
         </TabsContent>
 
@@ -184,6 +281,17 @@ export default function ExportWorkflow({
                 <p className="text-sm text-amber-600">
                   Complete more workflow steps to enable export
                 </p>
+              )}
+
+              {smartQuestions && (
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    <strong>Completion Strategy:</strong> {smartQuestions.completionStrategy}
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    Estimated time: {smartQuestions.estimatedTimeToComplete} minutes
+                  </p>
+                </div>
               )}
             </CardContent>
           </Card>
