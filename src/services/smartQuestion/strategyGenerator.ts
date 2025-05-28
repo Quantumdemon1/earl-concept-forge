@@ -1,5 +1,5 @@
 
-import type { QualityAnalysis } from '../deliverableEnhancer'
+import type { QualityAnalysis } from '../deliverableEnhancer/types'
 
 export class StrategyGenerator {
   static generateCompletionStrategy(analysis: QualityAnalysis, answeredCount: number): string {

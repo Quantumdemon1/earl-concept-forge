@@ -7,7 +7,8 @@ import { EnhancementQuestionsGenerator } from './gapAnalysis/enhancementQuestion
 import { RecommendedActionsGenerator } from './gapAnalysis/recommendedActionsGenerator'
 
 // Re-export types from the types module
-export type { GapAnalysisResult, EnhancementQuestion, QualityAnalysis } from './gapAnalysis/types'
+export type { GapAnalysisResult, EnhancementQuestion } from './gapAnalysis/types'
+export type { QualityAnalysis } from './deliverableEnhancer/types'
 
 export class GapAnalysisService {
   static analyzeDeliverableGaps(deliverable: CompiledDeliverable) {

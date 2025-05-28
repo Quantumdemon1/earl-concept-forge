@@ -1,6 +1,6 @@
 
 import type { CompiledDeliverable } from '../deliverableCompiler'
-import type { QualityAnalysis } from '../deliverableEnhancer'
+import type { QualityAnalysis } from '../deliverableEnhancer/types'
 import type { SmartQuestion } from './types'
 
 export class QuestionGenerator {

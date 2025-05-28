@@ -1,6 +1,6 @@
 
 import type { CompiledDeliverable } from '../deliverableCompiler'
-import type { QualityAnalysis } from '../deliverableEnhancer'
+import type { QualityAnalysis } from '../deliverableEnhancer/types'
 
 export interface GapAnalysisResult {
   missingComponents: string[]
@@ -17,5 +17,3 @@ export interface EnhancementQuestion {
   purpose: string
   priority: 'high' | 'medium' | 'low'
 }
-
-export type { QualityAnalysis } from '../deliverableEnhancer'

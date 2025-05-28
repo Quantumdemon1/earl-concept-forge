@@ -1,6 +1,6 @@
 
 import type { CompiledDeliverable } from '../deliverableCompiler'
-import type { QualityAnalysis } from '../deliverableEnhancer'
+import type { QualityAnalysis } from '../deliverableEnhancer/types'
 
 export class WeakSectionsAnalyzer {
   static identifyWeakSections(deliverable: CompiledDeliverable, analysis: QualityAnalysis): string[] {

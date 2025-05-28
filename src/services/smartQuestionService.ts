@@ -1,6 +1,6 @@
 
 import type { CompiledDeliverable } from './deliverableCompiler'
-import type { QualityAnalysis } from './deliverableEnhancer'
+import type { QualityAnalysis } from './deliverableEnhancer/types'
 import type { SmartQuestionResult, AnsweredQuestion } from './smartQuestion/types'
 import { QuestionGenerator } from './smartQuestion/questionGenerator'
 import { QuestionPrioritizer } from './smartQuestion/prioritizer'

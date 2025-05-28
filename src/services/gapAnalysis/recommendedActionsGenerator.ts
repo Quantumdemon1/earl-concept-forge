@@ -1,5 +1,5 @@
 
-import type { QualityAnalysis } from '../deliverableEnhancer'
+import type { QualityAnalysis } from '../deliverableEnhancer/types'
 
 export class RecommendedActionsGenerator {
   static generateRecommendedActions(analysis: QualityAnalysis, missingComponents: string[]): string[] {

@@ -1,5 +1,5 @@
 
-import type { QualityAnalysis } from '../deliverableEnhancer'
+import type { QualityAnalysis } from '../deliverableEnhancer/types'
 import type { SmartQuestion } from './types'
 
 export class QuestionPrioritizer {
