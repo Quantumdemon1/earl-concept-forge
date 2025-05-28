@@ -11,7 +11,7 @@ import DevelopmentPanel from '@/components/development/DevelopmentPanel'
 import ExportPanel from '@/components/export/ExportPanel'
 
 export default function ConceptDetail() {
-  const { conceptId } = useParams()
+  const { id: conceptId } = useParams()
   const { toast } = useToast()
   const [concept, setConcept] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
