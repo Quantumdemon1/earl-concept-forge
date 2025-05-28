@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -9,9 +10,9 @@ import ExportFormatSelector from './ExportFormatSelector'
 import ExportOptionsSelector from './ExportOptionsSelector'
 import DeliverableTemplateSelector from './DeliverableTemplateSelector'
 import ExportWorkflow from './ExportWorkflow'
-import { deliverableCompiler } from '@/services/deliverableCompiler'
-import { gapAnalysisService } from '@/services/gapAnalysisService'
-import { exportUtils } from '@/utils/exportUtils'
+import { DeliverableCompilerService } from '@/services/deliverableCompiler'
+import { GapAnalysisService } from '@/services/gapAnalysisService'
+import * as exportUtils from '@/utils/exportUtils'
 import type { CompiledDeliverable } from '@/services/deliverableCompiler'
 import type { GapAnalysisResult } from '@/services/gapAnalysisService'
 import type { EnhancementQuestion } from '@/services/gapAnalysisService'
@@ -84,13 +85,13 @@ export default function ExportPanel({ conceptId, conceptName, conceptData }: Exp
   const handleRecompile = async () => {
     setIsRecompiling(true)
     try {
-      const newCompiled = await deliverableCompiler.compile(conceptData)
+      const newCompiled = await DeliverableCompilerService.compileFromDevelopmentData(conceptData.concept, conceptData)
       setCompiledDeliverable(newCompiled)
 
-      const newGapAnalysis = await gapAnalysisService.analyzeGaps(newCompiled)
+      const newGapAnalysis = await GapAnalysisService.analyzeDeliverableGaps(newCompiled)
       setGapAnalysis(newGapAnalysis)
 
-      const newQuestions = await gapAnalysisService.generateEnhancementQuestions(newGapAnalysis)
+      const newQuestions = await GapAnalysisService.generateEnhancementQuestions(newCompiled)
       setEnhancementQuestions(newQuestions)
 
       toast({
@@ -113,13 +114,13 @@ export default function ExportPanel({ conceptId, conceptName, conceptData }: Exp
     const compileInitialDeliverable = async () => {
       setIsLoading(true)
       try {
-        const initialCompiled = await deliverableCompiler.compile(conceptData)
+        const initialCompiled = await DeliverableCompilerService.compileFromDevelopmentData(conceptData.concept || conceptData, conceptData)
         setCompiledDeliverable(initialCompiled)
 
-        const initialGapAnalysis = await gapAnalysisService.analyzeGaps(initialCompiled)
+        const initialGapAnalysis = await GapAnalysisService.analyzeDeliverableGaps(initialCompiled)
         setGapAnalysis(initialGapAnalysis)
 
-        const initialQuestions = await gapAnalysisService.generateEnhancementQuestions(initialGapAnalysis)
+        const initialQuestions = await GapAnalysisService.generateEnhancementQuestions(initialCompiled)
         setEnhancementQuestions(initialQuestions)
       } catch (error) {
         console.error('Initial compilation failed:', error)
@@ -176,7 +177,7 @@ export default function ExportPanel({ conceptId, conceptName, conceptData }: Exp
             gapAnalysis={gapAnalysis}
             enhancementQuestions={enhancementQuestions}
             conceptName={conceptName}
-            conceptId={conceptId} // Pass conceptId prop
+            conceptId={conceptId}
             onRecompile={handleRecompile}
             onExport={handleExport}
             isRecompiling={isRecompiling}
@@ -195,16 +196,13 @@ export default function ExportPanel({ conceptId, conceptName, conceptData }: Exp
             </CardHeader>
             <CardContent className="space-y-4">
               <ExportFormatSelector
-                selectedFormat={selectedFormat}
-                onFormatChange={setSelectedFormat}
+                onFormatSelect={setSelectedFormat}
               />
               <DeliverableTemplateSelector
-                selectedTemplate={selectedTemplate}
-                onTemplateChange={setSelectedTemplate}
+                onTemplateSelect={setSelectedTemplate}
               />
               <ExportOptionsSelector
-                exportOptions={exportOptions}
-                onOptionChange={setExportOptions}
+                onOptionsChange={setExportOptions}
               />
               <div className="flex justify-end">
                 <Button

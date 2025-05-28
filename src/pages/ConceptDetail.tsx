@@ -1,173 +1,92 @@
-
-import { useState } from 'react'
-import { useParams, Navigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
+import React, { useState, useEffect } from 'react'
+import { useParams } from 'react-router-dom'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Card, CardContent } from '@/components/ui/card'
-import StartAnalysisDialog from '@/components/analysis/StartAnalysisDialog'
-import DevelopmentPanel from '@/components/development/DevelopmentPanel'
+import { useToast } from '@/hooks/use-toast'
+import { projectService } from '@/services/projectService'
+import { ConceptHeader } from '@/components/ConceptHeader'
+import { ConceptOverviewTab } from '@/components/ConceptOverviewTab'
+import { ConceptAnalysisTab } from '@/components/ConceptAnalysisTab'
+import { DevelopmentPanel } from '@/components/development/DevelopmentPanel'
 import ExportPanel from '@/components/export/ExportPanel'
-import ConceptHeader from '@/components/concept/ConceptHeader'
-import ConceptOverviewTab from '@/components/concept/ConceptOverviewTab'
-import ConceptAnalysisTab from '@/components/concept/ConceptAnalysisTab'
-import { Zap, Brain, FileText } from 'lucide-react'
-
-// UUID validation helper
-const isValidUUID = (uuid: string): boolean => {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-  return uuidRegex.test(uuid)
-}
 
 export default function ConceptDetail() {
-  const { id } = useParams<{ id: string }>()
-  const [showAnalysisDialog, setShowAnalysisDialog] = useState(false)
-  const [activeTab, setActiveTab] = useState('overview')
-  
-  // Validate UUID parameter
-  if (!id || !isValidUUID(id)) {
-    return <Navigate to="/concepts/list" replace />
-  }
-  
-  const { data: concept, isLoading, error } = useQuery({
-    queryKey: ['concept', id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('concepts')
-        .select('*')
-        .eq('id', id)
-        .single()
-      
-      if (error) throw error
-      return data
-    },
-    enabled: !!id && isValidUUID(id),
-  })
-  
-  const { data: analyses } = useQuery({
-    queryKey: ['concept-analyses', id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('analysis_jobs')
-        .select('*')
-        .eq('concept_id', id)
-        .order('created_at', { ascending: false })
-      
-      if (error) throw error
-      return data
-    },
-    enabled: !!id && isValidUUID(id),
-  })
+  const { conceptId } = useParams()
+  const { toast } = useToast()
+  const [concept, setConcept] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [exportData, setExportData] = useState<any>(null)
 
-  const { data: developmentSession } = useQuery({
-    queryKey: ['development-session', id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('concept_development_sessions')
-        .select('*')
-        .eq('concept_id', id)
-        .eq('is_active', true)
-        .maybeSingle()
-      
-      if (error) throw error
-      return data
-    },
-    enabled: !!id && isValidUUID(id),
-  })
-  
+  useEffect(() => {
+    if (!conceptId) {
+      toast({
+        title: 'Missing Concept ID',
+        description: 'No concept ID provided in the URL.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    const fetchConcept = async () => {
+      setIsLoading(true)
+      try {
+        const data = await projectService.getConceptById(conceptId)
+        setConcept(data.concept)
+        setExportData(data)
+      } catch (error) {
+        console.error('Error fetching concept:', error)
+        toast({
+          title: 'Error Fetching Concept',
+          description: 'Failed to load concept details. Please try again.',
+          variant: 'destructive',
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchConcept()
+  }, [conceptId, toast])
+
   if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-        </div>
-      </div>
-    )
+    return <div>Loading concept details...</div>
   }
-  
-  if (error) {
-    return (
-      <div className="space-y-6">
-        <Card>
-          <CardContent className="flex items-center justify-center py-8">
-            <p className="text-destructive">Error loading concept: {error.message}</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-  
+
   if (!concept) {
-    return (
-      <div className="space-y-6">
-        <Card>
-          <CardContent className="flex items-center justify-center py-8">
-            <p className="text-muted-foreground">Concept not found</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
+    return <div>Concept not found.</div>
   }
-  
+
   return (
     <div className="space-y-6">
-      <ConceptHeader
-        concept={concept}
-        developmentSession={developmentSession}
-        onStartAnalysis={() => setShowAnalysisDialog(true)}
-        onOpenDevelopment={() => setActiveTab('development')}
-      />
-
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview">
-            <FileText className="h-4 w-4 mr-2" />
-            Overview
-          </TabsTrigger>
-          <TabsTrigger value="analysis">
-            <Brain className="h-4 w-4 mr-2" />
-            EARL Analysis
-          </TabsTrigger>
-          <TabsTrigger value="development">
-            <Zap className="h-4 w-4 mr-2" />
-            AI Development
-            {developmentSession && (
-              <span className="ml-2 flex h-2 w-2 rounded-full bg-green-500" />
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="export">
-            <FileText className="h-4 w-4 mr-2" />
-            Export
-          </TabsTrigger>
+      <ConceptHeader concept={concept} />
+      
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="analysis">Analysis</TabsTrigger>
+          <TabsTrigger value="development">Development</TabsTrigger>
+          <TabsTrigger value="export">Export & Deliverables</TabsTrigger>
         </TabsList>
-        
-        <TabsContent value="overview" className="space-y-4">
+
+        <TabsContent value="overview">
           <ConceptOverviewTab concept={concept} />
         </TabsContent>
-        
-        <TabsContent value="analysis" className="space-y-4">
-          <ConceptAnalysisTab conceptId={concept.id} analyses={analyses} />
+
+        <TabsContent value="analysis">
+          <ConceptAnalysisTab conceptId={concept.id} />
         </TabsContent>
-        
-        <TabsContent value="development" className="space-y-4">
-          <DevelopmentPanel
+
+        <TabsContent value="development">
+          <DevelopmentPanel conceptId={concept.id} />
+        </TabsContent>
+
+        <TabsContent value="export">
+          <ExportPanel 
             conceptId={concept.id}
             conceptName={concept.name}
+            conceptData={exportData}
           />
         </TabsContent>
-        
-        <TabsContent value="export" className="space-y-4">
-          <ExportPanel concept={concept} />
-        </TabsContent>
       </Tabs>
-      
-      <StartAnalysisDialog
-        conceptId={concept.id}
-        conceptName={concept.name}
-        open={showAnalysisDialog}
-        onOpenChange={setShowAnalysisDialog}
-      />
     </div>
   )
 }
