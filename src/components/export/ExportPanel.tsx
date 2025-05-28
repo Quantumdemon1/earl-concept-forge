@@ -1,13 +1,16 @@
+
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { Loader2 } from 'lucide-react'
+import { Loader2, AlertTriangle, CheckCircle, Info } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import ExportFormatSelector from './ExportFormatSelector'
 import ExportOptionsSelector from './ExportOptionsSelector'
 import ExportButton from './ExportButton'
 import DeliverableTemplateSelector from './DeliverableTemplateSelector'
 import { exportJSON, exportMarkdown, exportPDF, exportDeliverableTemplate, compileExportData } from '@/utils/exportUtils'
+import { GapAnalysisService } from '@/services/gapAnalysisService'
 
 interface ExportPanelProps {
   concept: any
@@ -18,6 +21,7 @@ export default function ExportPanel({ concept }: ExportPanelProps) {
   const [exportFormat, setExportFormat] = useState('deliverable')
   const [selectedTemplate, setSelectedTemplate] = useState('Executive Summary')
   const [isExporting, setIsExporting] = useState(false)
+  const [showGapAnalysis, setShowGapAnalysis] = useState(false)
   const [includeOptions, setIncludeOptions] = useState({
     overview: true,
     earlAnalysis: true,
@@ -71,6 +75,24 @@ export default function ExportPanel({ concept }: ExportPanelProps) {
         developmentIterations: developmentIterations.data || []
       }
     },
+  })
+  
+  // Add gap analysis query
+  const { data: gapAnalysis } = useQuery({
+    queryKey: ['gap-analysis', concept.id],
+    queryFn: async () => {
+      if (!exportData?.development || exportData.development.length === 0) {
+        return null
+      }
+      
+      const compiledData = compileExportData(concept, exportData, includeOptions)
+      if (!compiledData.compiledDeliverable) {
+        return null
+      }
+      
+      return GapAnalysisService.analyzeDeliverableGaps(compiledData.compiledDeliverable)
+    },
+    enabled: !!exportData?.development && exportData.development.length > 0
   })
   
   const handleExport = async () => {
@@ -144,12 +166,100 @@ export default function ExportPanel({ concept }: ExportPanelProps) {
         <ul className="text-sm text-blue-800 space-y-1">
           <li>• <strong>Smart Deliverables</strong>: Compiled project specifications from AI development</li>
           <li>• <strong>Multiple Templates</strong>: Executive summaries, technical specs, business plans</li>
-          <li>• <strong>Quality Metrics</strong>: Automated assessment of project readiness</li>
-          <li>• <strong>Implementation Roadmaps</strong>: Step-by-step development plans</li>
+          <li>• <strong>Gap Analysis</strong>: Automated assessment of deliverable completeness</li>
+          <li>• <strong>Enhancement Suggestions</strong>: AI-powered recommendations for improvement</li>
           <li>• Complete LLM interactions and development history</li>
           <li>• EARL analysis results and validation data</li>
         </ul>
       </div>
+
+      {/* Gap Analysis Section */}
+      {gapAnalysis && hasCompletedDevelopment && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-medium">Deliverable Quality Assessment</h3>
+            <button
+              onClick={() => setShowGapAnalysis(!showGapAnalysis)}
+              className="text-sm text-blue-600 hover:text-blue-800"
+            >
+              {showGapAnalysis ? 'Hide Details' : 'Show Details'}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center p-3 bg-white border rounded-lg">
+              <div className="text-2xl font-bold text-green-600">{gapAnalysis.qualityAnalysis.completenessScore}%</div>
+              <div className="text-sm text-gray-600">Completeness</div>
+            </div>
+            <div className="text-center p-3 bg-white border rounded-lg">
+              <div className="text-2xl font-bold text-blue-600">{gapAnalysis.qualityAnalysis.actionabilityScore}%</div>
+              <div className="text-sm text-gray-600">Actionability</div>
+            </div>
+            <div className="text-center p-3 bg-white border rounded-lg">
+              <div className="text-2xl font-bold text-purple-600">{gapAnalysis.qualityAnalysis.clarityScore}%</div>
+              <div className="text-sm text-gray-600">Clarity</div>
+            </div>
+            <div className="text-center p-3 bg-white border rounded-lg">
+              <div className="text-2xl font-bold text-orange-600">{gapAnalysis.qualityAnalysis.marketReadinessScore}%</div>
+              <div className="text-sm text-gray-600">Market Ready</div>
+            </div>
+          </div>
+
+          {showGapAnalysis && (
+            <div className="space-y-4">
+              {gapAnalysis.qualityAnalysis.suggestions.length > 0 && (
+                <Alert>
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    <div className="space-y-2">
+                      <div className="font-medium">Improvement Suggestions:</div>
+                      <ul className="list-disc list-inside space-y-1 text-sm">
+                        {gapAnalysis.qualityAnalysis.suggestions.slice(0, 3).map((suggestion, index) => (
+                          <li key={index}>
+                            <span className="font-medium">{suggestion.section}:</span> {suggestion.suggestion}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {gapAnalysis.missingComponents.length > 0 && (
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    <div className="space-y-2">
+                      <div className="font-medium">Missing Components:</div>
+                      <ul className="list-disc list-inside space-y-1 text-sm">
+                        {gapAnalysis.missingComponents.slice(0, 3).map((component, index) => (
+                          <li key={index}>{component}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {gapAnalysis.recommendedActions.length > 0 && (
+                <Alert>
+                  <CheckCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    <div className="space-y-2">
+                      <div className="font-medium">Recommended Actions:</div>
+                      <ul className="list-disc list-inside space-y-1 text-sm">
+                        {gapAnalysis.recommendedActions.slice(0, 3).map((action, index) => (
+                          <li key={index}>{action}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          )}
+        </div>
+      )}
       
       <ExportFormatSelector 
         value={exportFormat} 
