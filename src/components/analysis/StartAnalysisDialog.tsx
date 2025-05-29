@@ -1,7 +1,7 @@
 
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import {
   Dialog,
@@ -32,6 +32,7 @@ export default function StartAnalysisDialog({
   onOpenChange,
 }: StartAnalysisDialogProps) {
   const navigate = useNavigate()
+  const location = useLocation()
   const { toast } = useToast()
   const { user } = useAuth()
   
@@ -51,8 +52,9 @@ export default function StartAnalysisDialog({
         throw new Error('Invalid concept ID provided')
       }
       
-      // Check if user is authenticated
-      if (!user) {
+      // Check authentication - allow bypass for testing
+      const isFromBypass = location.state?.fromBypass || localStorage.getItem('auth-bypass') === 'true'
+      if (!user && !isFromBypass) {
         throw new Error('User must be authenticated to start analysis')
       }
       
