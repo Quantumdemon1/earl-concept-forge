@@ -71,6 +71,7 @@ export default function StartAnalysisDialog({
         description: 'EARL framework analysis has begun.',
       })
       onOpenChange(false)
+      // Navigate to the analysis view with the job ID as the stage parameter
       navigate(`/concepts/${conceptId}/analysis/${data.id}`)
     },
     onError: (error) => {
