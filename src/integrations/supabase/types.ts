@@ -57,6 +57,13 @@ export type Database = {
             referencedRelation: "concepts"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_analysis_jobs_concept_id"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "concepts"
+            referencedColumns: ["id"]
+          },
         ]
       }
       concept_analyses: {
@@ -445,7 +452,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      user_owns_concept: {
+        Args: { concept_uuid: string }
+        Returns: boolean
+      }
     }
     Enums: {
       concept_status:

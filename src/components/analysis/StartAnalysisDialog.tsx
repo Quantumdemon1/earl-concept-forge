@@ -43,17 +43,47 @@ export default function StartAnalysisDialog({
   const startAnalysisMutation = useMutation({
     mutationFn: async () => {
       console.log('Starting analysis for concept:', conceptId)
+      console.log('User:', user)
+      console.log('Config:', config)
+      
+      // Validate conceptId
+      if (!conceptId || conceptId === 'undefined') {
+        throw new Error('Invalid concept ID provided')
+      }
+      
+      // Check if user is authenticated
+      if (!user) {
+        throw new Error('User must be authenticated to start analysis')
+      }
+      
+      // First, verify the concept exists and user has access
+      const { data: conceptCheck, error: conceptError } = await supabase
+        .from('concepts')
+        .select('id, owner_id')
+        .eq('id', conceptId)
+        .single()
+      
+      if (conceptError) {
+        console.error('Error checking concept:', conceptError)
+        throw new Error(`Concept not found: ${conceptError.message}`)
+      }
+      
+      console.log('Concept check result:', conceptCheck)
       
       // Create analysis job record
+      const insertData = {
+        concept_id: conceptId,
+        status: 'pending' as const,
+        current_stage: 'evaluate',
+        progress: 0,
+        config: config,
+      }
+      
+      console.log('Inserting analysis job with data:', insertData)
+      
       const { data, error } = await supabase
         .from('analysis_jobs')
-        .insert({
-          concept_id: conceptId,
-          status: 'pending',
-          current_stage: 'evaluate',
-          progress: 0,
-          config: config,
-        })
+        .insert(insertData)
         .select()
         .single()
       
